@@ -1,0 +1,44 @@
+############################
+# Xcode
+############################
+
+# Build & cache
+DerivedData/
+build/
+
+# User-specific Xcode data
+**/xcuserdata/
+**/*.xcuserstate
+**/*.xccheckout
+
+# SwiftPM
+.swiftpm/
+Package.resolved
+
+############################
+# CocoaPods
+############################
+
+Pods/
+
+############################
+# Carthage
+############################
+
+Carthage/Build/
+
+############################
+# Fastlane
+############################
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+############################
+# macOS
+############################
+
+.DS_Store
+
