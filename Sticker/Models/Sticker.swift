@@ -54,6 +54,7 @@ struct Sticker: Identifiable, Equatable, Codable {
     let id: UUID
     var content: StickerContent
     let scopes: Set<StickerScope>
+    var imageSize: CGSize = CGSize(width: 200, height: 200)
     
     /// 归一化坐标（0~1）
     var normalizedPosition: CGPoint

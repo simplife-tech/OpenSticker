@@ -127,6 +127,12 @@ func copyToClipboard(_ text: String) {
     pb.setString(text, forType: .string)
 }
 
+func copyImageToClipboard(_ image: NSImage) {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.writeObjects([image])
+}
+
 func getCurrentAppInfo() -> (bundleId: String, name: String, icon: NSImage?)? {
     guard let app = NSWorkspace.shared.frontmostApplication else {
         return nil
@@ -138,3 +144,10 @@ func getCurrentAppInfo() -> (bundleId: String, name: String, icon: NSImage?)? {
         icon: app.icon
     )
 }
+
+extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+

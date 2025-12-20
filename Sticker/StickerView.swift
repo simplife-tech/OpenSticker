@@ -44,10 +44,7 @@ struct StickerView: View {
 
         case .image(let payload):
             if let nsImage = NSImage(contentsOf: payload.fileURL) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 240, maxHeight: 240)
+                StickerImageView(image: nsImage, size: $sticker.imageSize, sticker: $sticker)
             }
         }
     }
@@ -98,8 +95,11 @@ struct StickerView: View {
         switch sticker.content {
         case .text(let text):
             copyToClipboard(text)
-        case .image:
-            break // 以后可以做：复制图片
+        case .image(let payload):
+            let url = ImageStore.shared.imageURL(for: payload.filename)
+            if let image = NSImage(contentsOf: url) {
+                copyImageToClipboard(image)
+            }
         }
     }
 
@@ -114,5 +114,51 @@ struct StickerView: View {
 
     private func clamp(_ v: CGFloat) -> CGFloat {
         min(max(v, 0), 1)
+    }
+}
+
+struct StickerImageView: View {
+
+    let image: NSImage
+    @Binding var size: CGSize
+    @Binding var sticker: Sticker
+
+    @State private var startScale: CGFloat = 1.0
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+
+            Image(nsImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size.width, height: size.height)
+//                .padding(16)
+
+            // 🔵 缩放手柄
+            Circle()
+                .fill(Color.white)
+                .frame(width: 24, height: 24)
+                .overlay(
+                    Circle()
+                        .stroke(Color.blue, lineWidth: 1)
+                )
+                .opacity(0.001)
+                .padding(0)
+                .onHover { hovering in
+                    hovering
+                    ? NSCursor.openHand.set()
+                    : NSCursor.arrow.set()
+                }
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            let newWidth = max(40, sticker.imageSize.width + value.translation.width)
+                            let newHeight = max(40, sticker.imageSize.height + value.translation.height)
+
+                            sticker.imageSize = CGSize(width: newWidth, height: newHeight)
+                        }
+                )
+        }
+        .background(Color.clear)
     }
 }
