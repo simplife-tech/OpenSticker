@@ -37,8 +37,10 @@ struct OverlayRootView: View {
                 }
             }
             .background(Color.clear)
-            .onChange(of: store.stickers) { oldValue, newValue in
-                StickerStore.shared.save(newValue)
+            .onChange(of: draggingID) { oldValue, newValue in
+                if newValue == nil {
+                    StickerStore.shared.save(StickerStore.shared.stickers)
+                }
             }
         }
     }

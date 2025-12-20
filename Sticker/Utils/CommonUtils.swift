@@ -126,3 +126,15 @@ func copyToClipboard(_ text: String) {
     pb.clearContents()
     pb.setString(text, forType: .string)
 }
+
+func getCurrentAppInfo() -> (bundleId: String, name: String, icon: NSImage?)? {
+    guard let app = NSWorkspace.shared.frontmostApplication else {
+        return nil
+    }
+
+    return (
+        bundleId: app.bundleIdentifier ?? "unknown",
+        name: app.localizedName ?? "Unknown App",
+        icon: app.icon
+    )
+}

@@ -29,8 +29,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         hotKey.onOptionN = {
-            if let text = getSelectedText() {
-                self.store.addSticker(text: text)
+            DispatchQueue.main.async {
+                let text = getSelectedText()
+                PanelController.shared.toggle(initialText: text)
             }
         }
 
