@@ -58,7 +58,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             hosting.rootView.viewModel.text = initialText ?? ""
         }
 
-        panel?.makeKeyAndOrderFront(nil)
+        DispatchQueue.main.async {
+            self.panel?.makeKeyAndOrderFront(nil)
+        }
         panel?.makeKey()
         NSApp.activate(ignoringOtherApps: true)
         isVisible = true
@@ -91,6 +93,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             viewModel: viewModel,
             actions: actions,
             onAction: { action, text in
+                if text.count <= 0 {
+                    return
+                }
                 let sticker = Sticker(
                     id: UUID(),
                     content: .text(text),
