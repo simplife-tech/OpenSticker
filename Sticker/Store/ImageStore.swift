@@ -5,50 +5,32 @@
 //  Created by 周屹峰 on 2025/12/20.
 //
 
-
 import AppKit
 
 final class ImageStore {
 
     static let shared = ImageStore()
 
+    private let location = StickerResourceLocation.shared
+
     private init() {}
 
-    private var baseDir: URL {
-        let base = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
-
-        let dir = base
-            .appendingPathComponent("Sticker", isDirectory: true)
-            .appendingPathComponent("images", isDirectory: true)
-
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(
-                at: dir,
-                withIntermediateDirectories: true
-            )
-        }
-
-        return dir
+    private var imagesDir: URL {
+        location.imagesDir
     }
 
     func save(image: NSImage) -> ImagePayload {
         let id = UUID().uuidString + ".png"
-        let url = baseDir.appendingPathComponent(id)
+        let url = imagesDir.appendingPathComponent(id)
 
-        guard
-            let data = image.pngData()
-        else {
+        guard let data = image.pngData() else {
             fatalError("Failed to encode image")
         }
 
         try? data.write(to: url)
-
         return ImagePayload(filename: id)
     }
-    
+
     func remove(filename: String) {
         let url = imageURL(for: filename)
 
@@ -56,15 +38,11 @@ final class ImageStore {
             return
         }
 
-        do {
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            print("❌ Failed to remove image:", error)
-        }
+        try? FileManager.default.removeItem(at: url)
     }
 
     func imageURL(for filename: String) -> URL {
-        baseDir.appendingPathComponent(filename)
+        imagesDir.appendingPathComponent(filename)
     }
-    
 }
+

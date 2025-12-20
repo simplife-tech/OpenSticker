@@ -17,32 +17,21 @@ final class StickerStore: ObservableObject {
     
     let index = StickerIndex()
 
+    private let location = StickerResourceLocation.shared
 
     private init() {
         stickers = load()
         rebuildIndex()
     }
+    
 
-    private var baseUrl: URL {
-        let base = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
-
-        let dir = base.appendingPathComponent("Sticker", isDirectory: true)
-
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(
-                at: dir,
-                withIntermediateDirectories: true
-            )
-        }
-
-        return dir
+    private var fileURL: URL {
+        location.stickersJSON
     }
     
-    private var fileURL: URL {
-        return baseUrl.appendingPathComponent("stickers.json")
+    func refreshAll() {
+        stickers = load()
+        rebuildIndex()
     }
 
     private func load() -> [Sticker] {

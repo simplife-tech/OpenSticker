@@ -16,6 +16,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let contextController = ContextController()
     lazy var overlay = OverlayWindowController(store: store, contextController: contextController)
 
+    private let location = StickerResourceLocation.shared
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         
@@ -46,14 +48,119 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-//        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(named: "StatusIcon")
-        
+        statusItem.menu = buildMenu()
+    }
+    
+    private func buildMenu() -> NSMenu {
         let menu = NSMenu()
-        
-        menu.addItem(NSMenuItem(title: "退出", action: #selector(NSApp.terminate(_:)), keyEquivalent: "q"))
-        
-        statusItem.menu = menu
 
+        menu.addItem(resourceMenuItem())
+        menu.addItem(.separator())
+        menu.addItem(reloadItem())
+        menu.addItem(openFolderItem())
+        menu.addItem(.separator())
+        menu.addItem(quitItem())
+
+        return menu
+    }
+    
+    private func resourceMenuItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "📂 资源位置", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+
+        let useDefault = NSMenuItem(
+            title: "使用默认位置",
+            action: #selector(useDefaultLocation),
+            keyEquivalent: ""
+        )
+        useDefault.state = isUsingDefault() ? .on : .off
+
+        let chooseOther = NSMenuItem(
+            title: "选择其他文件夹…",
+            action: #selector(chooseCustomLocation),
+            keyEquivalent: ""
+        )
+
+        let current = NSMenuItem(
+            title: "当前：\(location.rootURL)",
+            action: nil,
+            keyEquivalent: ""
+        )
+        current.isEnabled = false
+
+        submenu.addItem(useDefault)
+        submenu.addItem(chooseOther)
+        submenu.addItem(.separator())
+        submenu.addItem(current)
+
+        item.submenu = submenu
+        return item
+    }
+
+    private func isUsingDefault() -> Bool {
+        location.rootURL == StickerResourceLocation.defaultURL()
+    }
+
+    // MARK: - Menu Actions
+
+    @objc private func useDefaultLocation() {
+        location.useDefault()
+        storeReload()
+        refreshMenu()
+    }
+
+    @objc private func chooseCustomLocation() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "选择资源文件夹"
+
+        if panel.runModal() == .OK, let url = panel.url {
+            location.useCustom(url: url)
+            storeReload()
+            refreshMenu()
+        }
+    }
+
+    @objc private func reloadStickers() {
+        storeReload()
+    }
+
+    @objc private func openResourceFolder() {
+        NSWorkspace.shared.open(location.rootURL)
+    }
+
+    private func reloadItem() -> NSMenuItem {
+        NSMenuItem(
+            title: "重载贴纸",
+            action: #selector(reloadStickers),
+            keyEquivalent: "r"
+        )
+    }
+
+    private func openFolderItem() -> NSMenuItem {
+        NSMenuItem(
+            title: "打开资源文件夹",
+            action: #selector(openResourceFolder),
+            keyEquivalent: ""
+        )
+    }
+
+    private func quitItem() -> NSMenuItem {
+        NSMenuItem(
+            title: "退出",
+            action: #selector(NSApp.terminate(_:)),
+            keyEquivalent: "q"
+        )
+    }
+
+    private func storeReload() {
+        StickerStore.shared.refreshAll()	
+    }
+
+    private func refreshMenu() {
+        statusItem.menu = buildMenu()
     }
 }
