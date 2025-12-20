@@ -32,13 +32,13 @@ struct StickerCommandView: View {
                 VStack(spacing: 6) {
 
                     ImagePasteTextView(viewModel: viewModel)
-                        .frame(height: 56)
+                        .frame(height: 46)
                         .background(Color(NSColor.controlBackgroundColor))
                         .cornerRadius(10)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(Color.black.opacity(0.05))
-                        )
+                    )
 
                     // 🖼 图片回显
                     if let image = viewModel.pastedImage {

@@ -31,6 +31,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private var actions: [ActionItem] = []
 
     func show(screen: NSScreen, initialText: String?) {
+        viewModel.reset(with: initialText)
         if let info = getCurrentAppInfo() {
             currentAppBundleId = info.bundleId
             currentAppName = info.name
