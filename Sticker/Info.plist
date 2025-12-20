@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+<key>NSAppleEventsUsageDescription</key>
+    <string>用于获取当前浏览器页面地址以匹配贴纸显示</string>
+
+<key>NSAppleEventsAllowedDestinations</key>
+<array>
+    <string>com.apple.Safari</string>
+    <string>com.google.Chrome</string>
+</array>
+</dict>
+</plist>

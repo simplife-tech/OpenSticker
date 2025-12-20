@@ -20,9 +20,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenuBar()
         
         hotKey.onKeyDown = {
-            self.contextController.refresh()
-            let screen = screenAtMouse()
-            self.overlay.show(on: screen)
+            self.contextController.refresh { context in
+                let screen = screenAtMouse()
+                self.overlay.show(on: screen)
+            }
         }
 
         hotKey.onKeyUp = {
