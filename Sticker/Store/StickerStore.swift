@@ -23,7 +23,7 @@ final class StickerStore: ObservableObject {
         rebuildIndex()
     }
 
-    private var fileURL: URL {
+    private var baseUrl: URL {
         let base = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -38,7 +38,11 @@ final class StickerStore: ObservableObject {
             )
         }
 
-        return dir.appendingPathComponent("stickers.json")
+        return dir
+    }
+    
+    private var fileURL: URL {
+        return baseUrl.appendingPathComponent("stickers.json")
     }
 
     private func load() -> [Sticker] {
@@ -82,7 +86,15 @@ final class StickerStore: ObservableObject {
         save(stickers)
     }
     
-    func remove(_ sticker: Sticker) {
+    func remove(_ id: UUID) {
+        guard let i = stickers.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+
+        let sticker = stickers[i]
+        if case .image(let payload) = sticker.content {
+            ImageStore.shared.remove(filename: payload.filename)
+        }
         stickers.removeAll { $0.id == sticker.id }
         index.remove(sticker)
         save(stickers)

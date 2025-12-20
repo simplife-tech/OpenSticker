@@ -57,7 +57,7 @@ struct OverlayRootView: View {
     
     private func deleteSticker(id: UUID) {
         withAnimation(.easeInOut(duration: 0.2)) {
-            store.stickers.removeAll { $0.id == id }
+            store.remove(id)
         }
     }
 }

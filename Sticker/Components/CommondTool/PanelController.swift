@@ -82,8 +82,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel?.orderOut(nil)
     }
     
-    private func scopesFromAction(_ action: ActionItem) -> Set<StickerScope> {
-        print(action.scope)
+    func scopesFromAction(_ action: ActionItem) -> Set<StickerScope> {
         switch action.scope {
         case .global:
             return [.global]
@@ -115,6 +114,19 @@ final class PanelController: NSObject, NSWindowDelegate {
             viewModel: viewModel,
             actions: actions,
             onAction: { action, text in
+                if let image = self.viewModel.pastedImage {
+                    let payload = ImageStore.shared.save(image: image)
+
+                    let sticker = Sticker(
+                        id: UUID(),
+                        content: .image(payload),
+                        scopes: self.scopesFromAction(action),
+                        normalizedPosition: getMousePosition()
+                    )
+                    StickerStore.shared.add(sticker)
+                    return
+                }
+                guard !text.isEmpty else { return }
                 if text.count <= 0 {
                     return
                 }

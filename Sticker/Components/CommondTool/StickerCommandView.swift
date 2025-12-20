@@ -24,18 +24,50 @@ struct StickerCommandView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(NSColor.windowBackgroundColor))
 
-            VStack(spacing: 0) {
+            VStack(spacing: 8) {
 
-                TextField("输入贴纸内容", text: $viewModel.text)
-                    .focused($focused)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 18))
-                    .padding(12)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(10)
-                    .offset(y: -4)
-                    .onSubmit { execute() }
+                // =====================
+                // 输入区（支持图片粘贴）
+                // =====================
+                VStack(spacing: 6) {
 
+                    ImagePasteTextView(viewModel: viewModel)
+                        .frame(height: 56)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.black.opacity(0.05))
+                        )
+
+                    // 🖼 图片回显
+                    if let image = viewModel.pastedImage {
+                        ZStack(alignment: .topTrailing) {
+                            Image(nsImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 120)
+                                .cornerRadius(8)
+
+                            Button {
+                                viewModel.clearImage()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white)
+                                    .background(.black.opacity(0.6))
+                                    .clipShape(Circle())
+                            }
+                            .padding(6)
+                        }
+                        .transition(.opacity)
+                    }
+                }
+                .padding(.horizontal, 2)
+                .padding(.top, 2)
+
+                // =====================
+                // Action 列表（你原来的）
+                // =====================
                 VStack(spacing: 2) {
                     ForEach(actions.indices, id: \.self) { index in
                         actionRow(actions[index], index: index)
@@ -49,18 +81,15 @@ struct StickerCommandView: View {
         .frame(width: 520)
         .ignoresSafeArea(.container, edges: .top)
         .onAppear {
-            DispatchQueue.main.async {
-                focused = true
-            }
             installKeyMonitor()
         }
         .onDisappear {
             removeKeyMonitor()
         }
-        .onExitCommand { onClose() } // Esc
+        .onExitCommand { onClose() }
     }
 
-    // MARK: - Action Row
+    // MARK: - Action Row（未改）
 
     private func actionRow(_ action: ActionItem, index: Int) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -92,14 +121,25 @@ struct StickerCommandView: View {
         }
     }
 
-    // MARK: - Keyboard
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.modifierFlags.contains(.command),
+               event.charactersIgnoringModifiers == "v" {
+
+                if let image = NSPasteboard.general.readObjects(
+                    forClasses: [NSImage.self],
+                    options: nil
+                )?.first as? NSImage {
+
+                    viewModel.pastedImage = image
+                    return nil
+                }
+            }
             switch event.keyCode {
             case 126: // ↑
                 viewModel.selectedIndex = max(viewModel.selectedIndex - 1, 0)
-                return nil   // 吃掉事件，防止 TextField 光标移动
+                return nil
 
             case 125: // ↓
                 viewModel.selectedIndex = min(
@@ -125,11 +165,12 @@ struct StickerCommandView: View {
         }
     }
 
-    // MARK: - Execute
 
     private func execute() {
         let action = actions[viewModel.selectedIndex]
         onAction(action, viewModel.text)
         onClose()
     }
+
+    
 }

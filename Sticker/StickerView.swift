@@ -42,11 +42,13 @@ struct StickerView: View {
             Text(text)
                 .multilineTextAlignment(.leading)
 
-        case .image(let imageName):
-            Image(imageName)
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: 200, maxHeight: 200)
+        case .image(let payload):
+            if let nsImage = NSImage(contentsOf: payload.fileURL) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 240, maxHeight: 240)
+            }
         }
     }
 
