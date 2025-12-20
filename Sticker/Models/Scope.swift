@@ -10,6 +10,8 @@ enum Scope {
     case global
     case browser
     case app
+    case domain
+    case url
 }
 
 struct ActionItem {

@@ -13,6 +13,7 @@ final class StickerIndex {
     private(set) var byApp: [String: Set<UUID>] = [:]
     private(set) var browser: Set<UUID> = []
     private(set) var byDomain: [String: Set<UUID>] = [:]
+    private(set) var byUrl: [String: Set<UUID>] = [:]
 
     func index(_ sticker: Sticker) {
         for scope in sticker.scopes {
@@ -26,8 +27,11 @@ final class StickerIndex {
             case .browser:
                 browser.insert(sticker.id)
 
-            case .browserSite(let domain):
+            case .browserDomain(let domain):
                 byDomain[domain, default: []].insert(sticker.id)
+                
+            case .browserUrl(let url):
+                byUrl[url, default: []].insert(sticker.id)
             }
         }
     }
@@ -44,8 +48,11 @@ final class StickerIndex {
             case .browser:
                 browser.remove(sticker.id)
 
-            case .browserSite(let domain):
+            case .browserDomain(let domain):
                 byDomain[domain]?.remove(sticker.id)
+            
+            case .browserUrl(let url):
+                byUrl[url]?.remove(sticker.id)
             }
         }
     }

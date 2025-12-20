@@ -16,6 +16,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     private var currentAppBundleId = ""
     private var currentAppName = ""
+    private var context: StickerContext?
     
     private(set) var isVisible = false
     
@@ -35,35 +36,45 @@ final class PanelController: NSObject, NSWindowDelegate {
             currentAppName = info.name
         }
         
-        actions = [
-            .init(title: "添加到 全局", subtitle: "所有应用可用", scope: .global),
-            .init(title: "添加到 浏览器", subtitle: "Chrome / Safari", scope: .browser),
-            .init(title: "添加到 当前应用", subtitle: "仅当前 App(\(currentAppName) \(currentAppBundleId))", scope: .app)
-        ]
-        
-        panel = createPanel()
-        
-        let size = panel!.frame.size
-        let screenFrame = screen.visibleFrame
+        buildCurrentContextAsync { context in
+            self.context = context
+            self.actions = [
+                .init(title: "添加到 全局", subtitle: "所有应用可用", scope: .global),
+                .init(title: "添加到 浏览器", subtitle: "Chrome / Safari", scope: .browser),
+                .init(title: "添加到 当前应用", subtitle: "仅当前 App(\(self.currentAppName) \(self.currentAppBundleId))", scope: .app)
+            ]
+            if let domain = context.domain {
+                self.actions.append(.init(title: "添加到 当前域名", subtitle: "仅当前 域名(\(domain))", scope: .domain))
+            }
+            if let url = context.url {
+                self.actions.append(.init(title: "添加到 当前网页", subtitle: "仅当前 网页(\(url))", scope: .url))
+            }
+                
+            self.panel = self.createPanel()
+            
+            let size = self.panel!.frame.size
+            let screenFrame = screen.visibleFrame
 
-        // 居中在当前屏幕
-        let origin = CGPoint(
-            x: screenFrame.midX - size.width / 2,
-            y: screenFrame.midY - size.height / 2
-        )
+            // 居中在当前屏幕
+            let origin = CGPoint(
+                x: screenFrame.midX - size.width / 2,
+                y: screenFrame.midY - size.height / 2
+            )
 
-        panel?.setFrameOrigin(origin)
+            self.panel?.setFrameOrigin(origin)
 
-        if let hosting = panel?.contentView as? NSHostingView<StickerCommandView> {
-            hosting.rootView.viewModel.text = initialText ?? ""
+            if let hosting = self.panel?.contentView as? NSHostingView<StickerCommandView> {
+                hosting.rootView.viewModel.text = initialText ?? ""
+            }
+
+            DispatchQueue.main.async {
+                self.panel?.makeKeyAndOrderFront(nil)
+            }
+            self.panel?.makeKey()
+            NSApp.activate(ignoringOtherApps: true)
+            self.isVisible = true
+            
         }
-
-        DispatchQueue.main.async {
-            self.panel?.makeKeyAndOrderFront(nil)
-        }
-        panel?.makeKey()
-        NSApp.activate(ignoringOtherApps: true)
-        isVisible = true
     }
 
     func hide() {
@@ -72,19 +83,30 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
     
     private func scopesFromAction(_ action: ActionItem) -> Set<StickerScope> {
+        print(action.scope)
         switch action.scope {
         case .global:
             return [.global]
-
+            
         case .browser:
             return [.browser]
-
+            
         case .app:
             guard !currentAppBundleId.isEmpty else {
                 return []
             }
             return [.app(bundleId: currentAppBundleId)]
+            
+        case .domain:
+            if let domain = context?.domain {
+                return [.browserDomain(domain: domain)]
+            }
+        case .url:
+            if let url = context?.url {
+                return [.browserUrl(url: url)]
+            }
         }
+        return []
     }
 
     private func createPanel() -> NSPanel {

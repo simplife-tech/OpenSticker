@@ -98,27 +98,27 @@ final class StickerStore: ObservableObject {
     func visibleStickers(in context: StickerContext) -> [Sticker] {
         var candidateIds = Set<UUID>()
         print(context)
-        // 1️⃣ 全局
         candidateIds.formUnion(index.global)
 
-        // 2️⃣ 当前 App
         if let bundleId = context.resolvedBundleId,
            let set = index.byApp[bundleId] {
             candidateIds.formUnion(set)
         }
 
-        // 3️⃣ 浏览器
         if context.isBrowser {
             candidateIds.formUnion(index.browser)
         }
 
-        // 4️⃣ 浏览器站点
         if let domain = context.domain,
            let set = index.byDomain[domain] {
             candidateIds.formUnion(set)
         }
 
-        // 5️⃣ ID → Sticker → 最终裁决
+        if let url = context.url,
+           let set = index.byUrl[url] {
+            candidateIds.formUnion(set)
+        }
+            
         return stickers
             .filter { candidateIds.contains($0.id) }
             .filter { $0.isVisible(in: context) }

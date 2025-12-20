@@ -50,11 +50,19 @@ extension Sticker {
                     return true
                 }
 
-            case .browserSite(let domain):
+            case .browserDomain(let domain):
                 // 浏览器 + 域名匹配
                 if context.isBrowser,
                    let currentDomain = context.domain,
                    currentDomain == domain {
+                    return true
+                }
+            
+            case .browserUrl(let url):
+                // 浏览器 + url匹配
+                if context.isBrowser,
+                   let currentUrl = context.url,
+                   currentUrl == url {
                     return true
                 }
             }

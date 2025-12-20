@@ -12,5 +12,6 @@ enum StickerScope: Hashable, Codable {
     case global
     case app(bundleId: String)
     case browser
-    case browserSite(domain: String)
+    case browserDomain(domain: String)
+    case browserUrl(url: String)
 }

@@ -44,7 +44,7 @@ func buildStickerContext() -> StickerContext {
         bundleId: app?.bundleId,
         isBrowser: app.map { isBrowserApp($0.bundleId) } ?? false,
         domain: domain,
-        url: url
+        url: stripQueryAndFragment(from: url)
     )
 }
 
@@ -89,7 +89,7 @@ func buildCurrentContextAsync(
             bundleId: bundleId,
             isBrowser: true,
             domain: domain,
-            url: urlString
+            url:  stripQueryAndFragment(from: urlString)
         )
 
         DispatchQueue.main.async {
@@ -178,3 +178,18 @@ func extractDomain(from urlString: String) -> String? {
 
     return host
 }
+
+func stripQueryAndFragment(from urlString: String?) -> String? {
+    guard
+        let urlString,
+        var components = URLComponents(string: urlString)
+    else {
+        return nil
+    }
+
+    components.query = nil
+    components.fragment = nil
+
+    return components.string
+}
+
