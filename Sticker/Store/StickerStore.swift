@@ -14,9 +14,13 @@ final class StickerStore: ObservableObject {
     static let shared = StickerStore()
 
     @Published var stickers: [Sticker] = []
+    
+    let index = StickerIndex()
+
 
     private init() {
         stickers = load()
+        rebuildIndex()
     }
 
     private var fileURL: URL {
@@ -65,37 +69,59 @@ final class StickerStore: ObservableObject {
         [
             Sticker(
                 id: UUID(),
-                text: "灵感\n桌面贴纸 = 按住即现",
-                normalizedPosition: CGPoint(x: 0.55, y: 0.22)
+                content: .text("灵感\n桌面贴纸 = 按住即现"),
+                scopes: [.global],
+                normalizedPosition: CGPoint(x: 0.55, y: 0.22),
             )
         ]
     }
     
-    func addSticker(text: String) {
-        let screen = screenAtMouse()
-
-        let mouse = NSEvent.mouseLocation
-
-        let frame = screen.frame
-
-        // 转换为当前屏幕内的 normalized 坐标
-        let normalizedX = (mouse.x - frame.minX) / frame.width
-        // ⭐️ 翻转 Y 坐标：macOS 坐标系 Y 轴向上，需要转换为向下
-        let normalizedY = 1.0 - (mouse.y - frame.minY) / frame.height
-
-        let position = CGPoint(
-            x: max(0, min(1, normalizedX)),
-            y: max(0, min(1, normalizedY))
-        )
-
-        let sticker = Sticker(
-            id: UUID(),
-            text: text,
-            normalizedPosition: position
-        )
-
+    func add(_ sticker: Sticker) {
         stickers.append(sticker)
+        index.index(sticker)
         save(stickers)
+    }
+    
+    func remove(_ sticker: Sticker) {
+        stickers.removeAll { $0.id == sticker.id }
+        index.remove(sticker)
+        save(stickers)
+    }
+    
+    private func rebuildIndex() {
+        index.clear()
+        for sticker in stickers {
+            index.index(sticker)
+        }
+    }
+    
+    func visibleStickers(in context: StickerContext) -> [Sticker] {
+        var candidateIds = Set<UUID>()
+        print(context)
+        // 1️⃣ 全局
+        candidateIds.formUnion(index.global)
+
+        // 2️⃣ 当前 App
+        if let bundleId = context.resolvedBundleId,
+           let set = index.byApp[bundleId] {
+            candidateIds.formUnion(set)
+        }
+
+        // 3️⃣ 浏览器
+        if context.isBrowser {
+            candidateIds.formUnion(index.browser)
+        }
+
+        // 4️⃣ 浏览器站点
+        if let domain = context.domain,
+           let set = index.byDomain[domain] {
+            candidateIds.formUnion(set)
+        }
+
+        // 5️⃣ ID → Sticker → 最终裁决
+        return stickers
+            .filter { candidateIds.contains($0.id) }
+            .filter { $0.isVisible(in: context) }
     }
 
 

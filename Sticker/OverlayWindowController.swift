@@ -12,14 +12,17 @@ import SwiftUI
 final class OverlayWindowController {
     private var window: NSWindow?
     private let store: StickerStore
+    private let contextController: ContextController
+
     
-    init(store: StickerStore) {
+    init(store: StickerStore, contextController: ContextController) {
         self.store = store
+        self.contextController = contextController
     }
 
     func show(on screen: NSScreen) {
         if window == nil {
-            let contentView = OverlayRootView(store: store)
+            let contentView = OverlayRootView(store: store, contextController: contextController)
 
             let hosting = NSHostingView(rootView: contentView)
             let win = NSWindow(

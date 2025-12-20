@@ -13,12 +13,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let hotKey = HotKeyManager()
     let store = StickerStore.shared
-    lazy var overlay = OverlayWindowController(store: store)
+    let contextController = ContextController()
+    lazy var overlay = OverlayWindowController(store: store, contextController: contextController)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         
         hotKey.onKeyDown = {
+            self.contextController.refresh()
             let screen = screenAtMouse()
             self.overlay.show(on: screen)
         }
@@ -31,11 +33,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hotKey.onOptionN = {
             DispatchQueue.main.async {
                 let text = getSelectedText()
-                PanelController.shared.toggle(initialText: text)
+                PanelController.shared.toggle(on: screenAtMouse(), initialText: text)
             }
         }
 
         hotKey.start()
+
         // 不显示 Dock 图标
         NSApp.setActivationPolicy(.accessory)
     }

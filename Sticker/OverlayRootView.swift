@@ -10,8 +10,11 @@ import SwiftUI
 
 struct OverlayRootView: View {
     @ObservedObject var store: StickerStore
+    @ObservedObject var contextController: ContextController
+
     @State private var draggingID: UUID?
     @State private var isOverDeleteBar = false
+    
     private let deleteBarRatio: CGFloat = 0.08
     
     var body: some View {
@@ -25,7 +28,7 @@ struct OverlayRootView: View {
                 }
                 
                 // Stickers
-                ForEach(store.stickers) { sticker in
+                ForEach(store.visibleStickers(in: contextController.context)) { sticker in
                     StickerView(
                         sticker: binding(for: sticker),
                         draggingID: $draggingID,

@@ -22,7 +22,7 @@ func getSelectedText() -> String? {
 //    print("1️⃣ 获取焦点元素: \(err == .success ? "✅ 成功" : "❌ 失败 (错误码: \(err.rawValue))")")
     
     guard err == .success, let focusedElement = focused else {
-        print("💡 提示: 请检查辅助功能权限")
+//        print("💡 提示: 请检查辅助功能权限")
         return nil
     }
     

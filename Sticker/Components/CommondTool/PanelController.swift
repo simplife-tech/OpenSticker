@@ -19,17 +19,17 @@ final class PanelController: NSObject, NSWindowDelegate {
     
     private(set) var isVisible = false
     
-    func toggle(initialText: String?) {
+    func toggle(on screen: NSScreen, initialText: String?) {
         if isVisible {
             hide()
         } else {
-            show(initialText: initialText)
+            show(screen: screen, initialText: initialText)
         }
     }
 
     private var actions: [ActionItem] = []
 
-    func show(initialText: String?) {
+    func show(screen: NSScreen, initialText: String?) {
         if let info = getCurrentAppInfo() {
             currentAppBundleId = info.bundleId
             currentAppName = info.name
@@ -42,12 +42,22 @@ final class PanelController: NSObject, NSWindowDelegate {
         ]
         
         panel = createPanel()
+        
+        let size = panel!.frame.size
+        let screenFrame = screen.visibleFrame
+
+        // 居中在当前屏幕
+        let origin = CGPoint(
+            x: screenFrame.midX - size.width / 2,
+            y: screenFrame.midY - size.height / 2
+        )
+
+        panel?.setFrameOrigin(origin)
 
         if let hosting = panel?.contentView as? NSHostingView<StickerCommandView> {
             hosting.rootView.viewModel.text = initialText ?? ""
         }
 
-        panel?.center()
         panel?.makeKeyAndOrderFront(nil)
         panel?.makeKey()
         NSApp.activate(ignoringOtherApps: true)
@@ -55,8 +65,24 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     func hide() {
-        panel?.orderOut(nil)
         isVisible = false
+        panel?.orderOut(nil)
+    }
+    
+    private func scopesFromAction(_ action: ActionItem) -> Set<StickerScope> {
+        switch action.scope {
+        case .global:
+            return [.global]
+
+        case .browser:
+            return [.browser]
+
+        case .app:
+            guard !currentAppBundleId.isEmpty else {
+                return []
+            }
+            return [.app(bundleId: currentAppBundleId)]
+        }
     }
 
     private func createPanel() -> NSPanel {
@@ -65,6 +91,13 @@ final class PanelController: NSObject, NSWindowDelegate {
             viewModel: viewModel,
             actions: actions,
             onAction: { action, text in
+                let sticker = Sticker(
+                    id: UUID(),
+                    content: .text(text),
+                    scopes: self.scopesFromAction(action),
+                    normalizedPosition: getMousePosition()
+                )
+                StickerStore.shared.add(sticker)
                 print("保存贴纸：\(text)，scope=\(action.scope)")
             },
             onClose: { self.hide() }
