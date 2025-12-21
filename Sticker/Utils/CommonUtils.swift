@@ -150,4 +150,3 @@ extension Comparable {
         min(max(self, range.lowerBound), range.upperBound)
     }
 }
-

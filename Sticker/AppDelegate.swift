@@ -21,6 +21,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         
+        guard hasAccessibilityPermission() else {
+            showAccessibilityAlert()
+            return
+        }
+        
         hotKey.onKeyDown = {
             self.contextController.refresh { context in
                 let screen = screenAtMouse()
@@ -163,4 +168,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func refreshMenu() {
         statusItem.menu = buildMenu()
     }
+    
+    private func showAccessibilityAlert() {
+        let alert = NSAlert()
+        alert.messageText = "需要辅助功能权限"
+        alert.informativeText = """
+    Sticker 需要辅助功能权限才能监听快捷键和显示贴纸。
+    请在系统设置中开启后，重新启动应用。
+    """
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "打开系统设置")
+        alert.addButton(withTitle: "退出")
+
+        let result = alert.runModal()
+
+        switch result {
+        case .alertFirstButtonReturn:
+            openAccessibilitySettings()
+            NSApp.terminate(nil)
+
+        default:
+            NSApp.terminate(nil)
+        }
+    }
+
 }
