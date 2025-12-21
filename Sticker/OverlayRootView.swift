@@ -36,7 +36,13 @@ struct OverlayRootView: View {
                         deleteBarRatio: deleteBarRatio,
                         screenSize: geo.size,
                         onDelete: deleteSticker
-                    )
+                    ).onHover { hovering in
+                        if hovering {
+                            NSCursor.openHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
                 }
             }
             .background(Color.clear)

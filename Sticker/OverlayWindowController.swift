@@ -22,22 +22,32 @@ final class OverlayWindowController {
 
     func show(on screen: NSScreen) {
         if window == nil {
-            let contentView = OverlayRootView(store: store, contextController: contextController)
+            let contentView = OverlayRootView(
+                store: store,
+                contextController: contextController
+            )
 
             let hosting = NSHostingView(rootView: contentView)
-            let win = NSWindow(
+
+            let panel = OverlayPanel(
                 contentRect: screen.frame,
-                styleMask: [.borderless],
+                styleMask: [
+                    .borderless,
+                    .nonactivatingPanel   // ⭐ 生死线
+                ],
                 backing: .buffered,
                 defer: false
             )
-            win.contentView = hosting
-            win.isOpaque = false
-            win.backgroundColor = .clear
-            win.level = .screenSaver
-            win.ignoresMouseEvents = false
-            win.collectionBehavior = [.fullScreenAuxiliary]
-            window = win
+
+            panel.contentView = hosting
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.level = .screenSaver   // 你现在这个层级 OK
+            panel.ignoresMouseEvents = false
+            panel.collectionBehavior = [.fullScreenAuxiliary]
+            panel.hidesOnDeactivate = false
+
+            window = panel
         }
 
         window?.setFrame(screen.frame, display: false)
