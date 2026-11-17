@@ -32,23 +32,25 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     func show(screen: NSScreen, initialText: String?) {
         viewModel.reset(with: initialText)
-        if let info = getCurrentAppInfo() {
-            currentAppBundleId = info.bundleId
-            currentAppName = info.name
-        }
+        let app = getCurrentAppInfo()
+        currentAppBundleId = app?.bundleId ?? ""
+        currentAppName = app?.name ?? ""
         
         buildCurrentContextAsync { context in
             self.context = context
             self.actions = [
-                .init(title: "添加到 全局", subtitle: "所有应用可用", scope: .global),
-                .init(title: "添加到 浏览器", subtitle: "Chrome / Safari", scope: .browser),
-                .init(title: "添加到 当前应用", subtitle: "仅当前 App(\(self.currentAppName) \(self.currentAppBundleId))", scope: .app)
+                .init(title: "全局", subtitle: "所有应用可用", scope: .global),
+                .init(title: "浏览器", subtitle: "Chrome / Safari", scope: .browser),
+                .init(title: "当前应用", subtitle: "仅在 \(self.currentAppName) 显示", scope: .app)
             ]
+            if self.currentAppBundleId.isEmpty {
+                self.actions.removeAll { $0.scope == .app }
+            }
             if let domain = context.domain {
-                self.actions.append(.init(title: "添加到 当前域名", subtitle: "仅当前 域名(\(domain))", scope: .domain))
+                self.actions.append(.init(title: "当前域名", subtitle: "\(domain)", scope: .domain))
             }
             if let url = context.url {
-                self.actions.append(.init(title: "添加到 当前网页", subtitle: "仅当前 网页(\(url))", scope: .url))
+                self.actions.append(.init(title: "当前网页", subtitle: "\(url)", scope: .url))
             }
                 
             self.panel = self.createPanel()
@@ -127,10 +129,7 @@ final class PanelController: NSObject, NSWindowDelegate {
                     StickerStore.shared.add(sticker)
                     return
                 }
-                guard !text.isEmpty else { return }
-                if text.count <= 0 {
-                    return
-                }
+                guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                 let sticker = Sticker(
                     id: UUID(),
                     content: .text(text),
@@ -144,7 +143,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         )
 
         let hosting = NSHostingView(rootView: view)
-        hosting.frame = NSRect(x: 0, y: 0, width: 520, height: 230)
+        hosting.frame = NSRect(x: 0, y: 0, width: 520, height: hosting.fittingSize.height)
 
         let panel = NSPanel(
             contentRect: hosting.frame,

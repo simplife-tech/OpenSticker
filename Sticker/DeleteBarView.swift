@@ -1,25 +1,22 @@
-//
-//  DeleteBarView.swift
-//  Sticker
-//
-//  Created by zhouyifeng on 2025/12/19.
-//
-
-
 import SwiftUI
 
 struct DeleteBarView: View {
     let active: Bool
 
-    var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(active ? Color.red.opacity(0.6) : Color.black.opacity(0.3))
-                .background(.ultraThinMaterial)
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-            Text("拖到此处删除")
-                .foregroundColor(.white)
-                .font(.headline)
-        }
+    var body: some View {
+        Label(active ? "松手删除贴纸" : "拖到这里删除贴纸",
+              systemImage: active ? "trash.fill" : "trash")
+            .font(.callout.weight(.semibold))
+            .foregroundStyle(active ? Color.white : .primary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                Capsule().fill(.regularMaterial)
+                Capsule().fill(active ? Color.red : .clear)
+                Capsule().strokeBorder(.primary.opacity(0.14))
+            }
+            .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: active)
     }
 }

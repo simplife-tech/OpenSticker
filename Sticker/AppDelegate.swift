@@ -7,9 +7,12 @@
 
 import AppKit
 import Cocoa
+import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
+
+    private var libraryWindow: NSWindow?
 
     let hotKey = HotKeyManager()
     let store = StickerStore.shared
@@ -26,18 +29,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
-        hotKey.onKeyDown = {
-            self.contextController.refresh { context in
-                let screen = screenAtMouse()
-                self.overlay.show(on: screen)
-            }
+        hotKey.onToggleOverlay = {
+            self.overlay.toggle(on: screenAtMouse())
         }
 
-        hotKey.onKeyUp = {
-            self.overlay.hide()
-            // 这里保存 stickers 位置即可
-        }
-        
         hotKey.onOptionN = {
             DispatchQueue.main.async {
                 let text = getSelectedText()
@@ -60,6 +55,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
 
+        let library = NSMenuItem(title: "管理贴纸…", action: #selector(showStickerLibrary), keyEquivalent: "")
+        library.target = self
+        menu.addItem(library)
+        menu.addItem(.separator())
         menu.addItem(resourceMenuItem())
         menu.addItem(.separator())
         menu.addItem(reloadItem())
@@ -70,6 +69,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return menu
     }
     
+    @objc private func showStickerLibrary() {
+        if libraryWindow == nil {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 680, height: 480),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "贴纸管理"
+            window.isReleasedWhenClosed = false
+            window.contentMinSize = NSSize(width: 540, height: 360)
+            window.contentView = NSHostingView(rootView: StickerLibraryView(store: store))
+            window.center()
+            libraryWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        libraryWindow?.makeKeyAndOrderFront(nil)
+    }
+
     private func resourceMenuItem() -> NSMenuItem {
         let item = NSMenuItem(title: "📂 资源位置", action: nil, keyEquivalent: "")
         let submenu = NSMenu()

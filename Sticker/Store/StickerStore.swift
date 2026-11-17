@@ -75,6 +75,19 @@ final class StickerStore: ObservableObject {
         save(stickers)
     }
     
+    func edit(_ id: UUID, content: StickerContent, scopes: Set<StickerScope>) throws {
+        guard let index = stickers.firstIndex(where: { $0.id == id }) else {
+            throw CocoaError(.validationMissingMandatoryProperty)
+        }
+        var updated = stickers
+        updated[index].content = content
+        updated[index].scopes = scopes
+        let data = try JSONEncoder().encode(updated)
+        try data.write(to: fileURL, options: .atomic)
+        stickers = updated
+        rebuildIndex()
+    }
+
     func remove(_ id: UUID) {
         guard let i = stickers.firstIndex(where: { $0.id == id }) else {
                 return

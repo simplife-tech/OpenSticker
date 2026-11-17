@@ -11,7 +11,6 @@ import AppKit
 struct StickerCommandView: View {
 
     @ObservedObject var viewModel: StickerCommandViewModel
-    @FocusState private var focused: Bool
 
     let actions: [ActionItem]
     let onAction: (ActionItem, String) -> Void
@@ -19,12 +18,22 @@ struct StickerCommandView: View {
 
     @State private var keyMonitor: Any?
 
+    private var canSave: Bool {
+        viewModel.pastedImage != nil || !viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(NSColor.windowBackgroundColor))
 
-            VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("新建贴纸")
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                Text("输入文字或粘贴图片，再选择贴纸的可见范围。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 // =====================
                 // 输入区（支持图片粘贴）
@@ -75,7 +84,16 @@ struct StickerCommandView: View {
                 }
                 .background(Color(NSColor.windowBackgroundColor))
                 .cornerRadius(10)
+
+                HStack {
+                    Text(canSave ? "↑ ↓ 选择范围   ↩ 保存" : "请输入文字或粘贴图片")
+                    Spacer()
+                    Text("Esc 关闭")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
+            .padding(16)
         }
         .padding(2)
         .frame(width: 520)
@@ -97,6 +115,7 @@ struct StickerCommandView: View {
                 .font(.system(size: 14, weight: .medium))
             if let subtitle = action.subtitle {
                 Text(subtitle)
+                    .lineLimit(1)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -115,10 +134,9 @@ struct StickerCommandView: View {
                 viewModel.selectedIndex = index
             }
         }
-        .onTapGesture {
-            viewModel.selectedIndex = index
-            execute()
-        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { selectAndExecute(index) }
+        .onTapGesture { selectAndExecute(index) }
     }
 
 
@@ -166,7 +184,13 @@ struct StickerCommandView: View {
     }
 
 
+    private func selectAndExecute(_ index: Int) {
+        viewModel.selectedIndex = index
+        execute()
+    }
+
     private func execute() {
+        guard canSave, actions.indices.contains(viewModel.selectedIndex) else { return }
         let action = actions[viewModel.selectedIndex]
         onAction(action, viewModel.text)
         onClose()

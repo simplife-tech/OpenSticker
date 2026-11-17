@@ -31,6 +31,15 @@ final class ImageStore {
         return ImagePayload(filename: id)
     }
 
+    func saveMarkdownImage(_ image: NSImage) throws -> String {
+        let filename = UUID().uuidString + ".png"
+        guard let data = image.pngData() else {
+            throw CocoaError(.fileWriteInapplicableStringEncoding)
+        }
+        try data.write(to: imageURL(for: filename), options: .atomic)
+        return "![图片](images/\(filename))"
+    }
+
     func remove(filename: String) {
         let url = imageURL(for: filename)
 
