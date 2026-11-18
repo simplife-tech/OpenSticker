@@ -32,15 +32,13 @@ final class OverlayWindowController {
             return
         }
 
-        let id = UUID()
-        presentationID = id
-        contextController.refresh { [weak self] _ in
-            guard let self, self.presentationID == id else { return }
-            self.show(on: screen)
-        }
+        presentationID = UUID()
+        show(on: screen)
     }
 
-    private func show(on screen: NSScreen) {
+    func show(on screen: NSScreen) {
+        if presentationID == nil { presentationID = UUID() }
+        mouseTimer?.invalidate()
         if window == nil {
             let contentView = OverlayRootView(
                 store: store,

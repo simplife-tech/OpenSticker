@@ -37,7 +37,7 @@ struct OverlayRootView: View {
                 }
 
                 // Stickers
-                ForEach(store.visibleStickers(in: contextController.context)) { sticker in
+                ForEach(store.stickers) { sticker in
                     StickerView(
                         sticker: binding(for: sticker),
                         draggingID: $draggingID,

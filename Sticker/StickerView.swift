@@ -406,7 +406,7 @@ struct StickerView: View {
     }
 }
 
-private struct MarkdownStickerEditor: NSViewRepresentable {
+struct MarkdownStickerEditor: NSViewRepresentable {
     let source: String
     let width: CGFloat
     let isEditing: Bool

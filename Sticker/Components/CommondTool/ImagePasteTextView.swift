@@ -12,10 +12,12 @@ import AppKit
 struct ImagePasteTextView: NSViewRepresentable {
 
     @ObservedObject var viewModel: StickerCommandViewModel
+    var onWindowChanged: (NSWindow?) -> Void = { _ in }
 
     func makeNSView(context: Context) -> NSView {
 
-        let container = NSView()
+        let container = InputContainer()
+        container.onWindowChanged = onWindowChanged
 
         // ===== TextView =====
         let textView = NSTextView()
@@ -68,6 +70,15 @@ struct ImagePasteTextView: NSViewRepresentable {
         Coordinator(viewModel: viewModel)
     }
 
+    private final class InputContainer: NSView {
+        var onWindowChanged: ((NSWindow?) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            onWindowChanged?(window)
+        }
+    }
+
     // MARK: - Coordinator
 
     final class Coordinator: NSObject, NSTextViewDelegate {
@@ -88,7 +99,7 @@ struct ImagePasteTextView: NSViewRepresentable {
 
         func updatePlaceholderVisibility() {
             let hasText = !(textView?.string.isEmpty ?? true)
-            let hasImage = viewModel.pastedImage != nil
+            let hasImage = false
             placeholder?.isHidden = hasText || hasImage
         }
     }

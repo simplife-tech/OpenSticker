@@ -1,90 +1,45 @@
-//
-//  HotKeyManager.swift
-//  Sticker
-//
-//  Created by zhouyifeng on 2025/12/19.
-//
-
 import Cocoa
+import Carbon
 
 final class HotKeyManager {
-
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-
     var onToggleOverlay: (() -> Void)?
     var onOptionN: (() -> Void)?
+    private var handler: EventHandlerRef?
+    private var keys: [EventHotKeyRef] = []
 
     func start() {
-        print("🔐 AXIsProcessTrusted =", AXIsProcessTrusted())
-
-        let mask =
-            CGEventMask(1 << CGEventType.keyDown.rawValue) |
-            CGEventMask(1 << CGEventType.keyUp.rawValue)
-
-        eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: { _, type, event, userInfo in
-
-                let manager = Unmanaged<HotKeyManager>
-                    .fromOpaque(userInfo!)
-                    .takeUnretainedValue()
-
-                let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-                let flags = event.flags
-
-                let isOptionDown = flags.contains(.maskAlternate)
-                let isTabKey = keyCode == 48   // Tab
-                let isNKey = keyCode == 45 //N
-                
-                if isOptionDown && isNKey && type == .keyDown {
-                    manager.onOptionN?()
-                    return nil
-                }
-
-                if isOptionDown && isTabKey {
-                    if type == .keyDown && event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
-                        manager.onToggleOverlay?()
-                    }
-                    return nil
-                }
-
-                return Unmanaged.passUnretained(event)
+        guard handler == nil else { return }
+        let status = InstallEventHandler(
+            GetApplicationEventTarget(),
+            { _, event, context in
+                guard let event, let context else { return OSStatus(eventNotHandledErr) }
+                var id = EventHotKeyID()
+                let result = GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                                              EventParamType(typeEventHotKeyID), nil,
+                                              MemoryLayout<EventHotKeyID>.size, nil, &id)
+                guard result == noErr else { return result }
+                let manager = Unmanaged<HotKeyManager>.fromOpaque(context).takeUnretainedValue()
+                if id.id == 1 { manager.onToggleOverlay?() }
+                if id.id == 2 { manager.onOptionN?() }
+                return noErr
             },
-            userInfo: UnsafeMutableRawPointer(
-                Unmanaged.passUnretained(self).toOpaque()
-            )
+            1,
+            [EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))],
+            Unmanaged.passUnretained(self).toOpaque(),
+            &handler
         )
-
-        guard let eventTap else {
-            print("❌ EventTap 创建失败（检查辅助功能权限）")
-            return
+        guard status == noErr else { return }
+        for (id, code) in [(UInt32(1), UInt32(kVK_Tab)), (UInt32(2), UInt32(kVK_ANSI_N))] {
+            var key: EventHotKeyRef?
+            let result = RegisterEventHotKey(code, UInt32(optionKey),
+                                             EventHotKeyID(signature: 0x53544B52, id: id),
+                                             GetApplicationEventTarget(), 0, &key)
+            if result == noErr, let key { keys.append(key) }
         }
-        
-        print("✅ EventTap 已创建")
-
-        runLoopSource = CFMachPortCreateRunLoopSource(
-            kCFAllocatorDefault,
-            eventTap,
-            0
-        )
-
-        CFRunLoopAddSource(
-            CFRunLoopGetCurrent(),
-            runLoopSource,
-            .commonModes
-        )
-
-        CGEvent.tapEnable(tap: eventTap, enable: true)
     }
 
     deinit {
-        if let eventTap {
-            CGEvent.tapEnable(tap: eventTap, enable: false)
-        }
+        for key in keys { UnregisterEventHotKey(key) }
+        if let handler { RemoveEventHandler(handler) }
     }
 }
-

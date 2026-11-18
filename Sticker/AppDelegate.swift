@@ -24,19 +24,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         
-        guard hasAccessibilityPermission() else {
-            showAccessibilityAlert()
-            return
-        }
-        
         hotKey.onToggleOverlay = {
             self.overlay.toggle(on: screenAtMouse())
         }
 
         hotKey.onOptionN = {
             DispatchQueue.main.async {
-                let text = getSelectedText()
-                PanelController.shared.toggle(on: screenAtMouse(), initialText: text)
+                PanelController.shared.toggle(on: screenAtMouse(), initialText: nil)
             }
         }
 

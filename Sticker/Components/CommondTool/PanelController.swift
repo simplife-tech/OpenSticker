@@ -1,169 +1,73 @@
-//
-//  PanelController.swift
-//  Sticker
-//
-//  Created by 周屹峰 on 2025/12/20.
-//
-
 import AppKit
 import SwiftUI
 
 final class PanelController: NSObject, NSWindowDelegate {
-
     static let shared = PanelController()
-
     private let viewModel = StickerCommandViewModel()
     private var panel: NSPanel?
-    private var currentAppBundleId = ""
-    private var currentAppName = ""
-    private var context: StickerContext?
-    
     private(set) var isVisible = false
-    
-    func toggle(on screen: NSScreen, initialText: String?) {
-        if isVisible {
-            hide()
-        } else {
-            show(screen: screen, initialText: initialText)
-        }
-    }
+    private var creationScreen: NSScreen?
 
-    private var actions: [ActionItem] = []
+    func toggle(on screen: NSScreen, initialText: String?) {
+        if isVisible { hide() }
+        else { show(screen: screen, initialText: initialText) }
+    }
 
     func show(screen: NSScreen, initialText: String?) {
-        viewModel.reset(with: initialText)
-        let app = getCurrentAppInfo()
-        currentAppBundleId = app?.bundleId ?? ""
-        currentAppName = app?.name ?? ""
-        
-        buildCurrentContextAsync { context in
-            self.context = context
-            self.actions = [
-                .init(title: "全局", subtitle: "所有应用可用", scope: .global),
-                .init(title: "浏览器", subtitle: "Chrome / Safari", scope: .browser),
-                .init(title: "当前应用", subtitle: "仅在 \(self.currentAppName) 显示", scope: .app)
-            ]
-            if self.currentAppBundleId.isEmpty {
-                self.actions.removeAll { $0.scope == .app }
-            }
-            if let domain = context.domain {
-                self.actions.append(.init(title: "当前域名", subtitle: "\(domain)", scope: .domain))
-            }
-            if let url = context.url {
-                self.actions.append(.init(title: "当前网页", subtitle: "\(url)", scope: .url))
-            }
-                
-            self.panel = self.createPanel()
-            
-            let size = self.panel!.frame.size
-            let screenFrame = screen.visibleFrame
-
-            // 居中在当前屏幕
-            let origin = CGPoint(
-                x: screenFrame.midX - size.width / 2,
-                y: screenFrame.midY - size.height / 2
-            )
-
-            self.panel?.setFrameOrigin(origin)
-
-            if let hosting = self.panel?.contentView as? NSHostingView<StickerCommandView> {
-                hosting.rootView.viewModel.text = initialText ?? ""
-            }
-
-            DispatchQueue.main.async {
-                self.panel?.makeKeyAndOrderFront(nil)
-            }
-            self.panel?.makeKey()
-            NSApp.activate(ignoringOtherApps: true)
-            self.isVisible = true
-            
-        }
-    }
-
-    func hide() {
-        isVisible = false
-        panel?.orderOut(nil)
-    }
-    
-    func scopesFromAction(_ action: ActionItem) -> Set<StickerScope> {
-        switch action.scope {
-        case .global:
-            return [.global]
-            
-        case .browser:
-            return [.browser]
-            
-        case .app:
-            guard !currentAppBundleId.isEmpty else {
-                return []
-            }
-            return [.app(bundleId: currentAppBundleId)]
-            
-        case .domain:
-            if let domain = context?.domain {
-                return [.browserDomain(domain: domain)]
-            }
-        case .url:
-            if let url = context?.url {
-                return [.browserUrl(url: url)]
-            }
-        }
-        return []
-    }
-
-    private func createPanel() -> NSPanel {
-
-        let view = StickerCommandView(
-            viewModel: viewModel,
-            actions: actions,
-            onAction: { action, text in
-                if let image = self.viewModel.pastedImage {
-                    let payload = ImageStore.shared.save(image: image)
-
-                    let sticker = Sticker(
-                        id: UUID(),
-                        content: .image(payload),
-                        scopes: self.scopesFromAction(action),
-                        normalizedPosition: getMousePosition()
-                    )
-                    StickerStore.shared.add(sticker)
-                    return
-                }
-                guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                let sticker = Sticker(
-                    id: UUID(),
-                    content: .text(text),
-                    scopes: self.scopesFromAction(action),
-                    normalizedPosition: getMousePosition()
-                )
-                StickerStore.shared.add(sticker)
-                print("保存贴纸：\(text)，scope=\(action.scope)")
-            },
-            onClose: { self.hide() }
-        )
-
+        creationScreen = screen
+        let view = StickerCommandView(viewModel: viewModel, onCreate: { [weak self] in
+            self?.create()
+        }, onClose: { [weak self] in self?.hide() })
         let hosting = NSHostingView(rootView: view)
-        hosting.frame = NSRect(x: 0, y: 0, width: 520, height: hosting.fittingSize.height)
-
-        let panel = NSPanel(
-            contentRect: hosting.frame,
-            styleMask: [.titled, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-
+        let size = hosting.fittingSize
+        let panel = ComposerPanel(contentRect: NSRect(origin: .zero, size: size),
+                            styleMask: [.borderless],
+                            backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
         panel.contentView = hosting
         panel.level = .floating
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        panel.isMovableByWindowBackground = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.standardWindowButton(.closeButton)?.isHidden = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.delegate = self
-        return panel
+        panel.setFrameOrigin(CGPoint(x: screen.visibleFrame.midX - size.width / 2,
+                                     y: screen.visibleFrame.midY - size.height / 2))
+        self.panel = panel
+        isVisible = true
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
     }
-    
-    func windowDidResignKey(_ notification: Notification) {
-        // 点空白 / 切应用 / 点别的窗口
+
+    func hide() {
+        isVisible = false
+        panel?.close()
+        panel = nil
+    }
+
+    private func create() {
+        guard !viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let sticker = Sticker(id: UUID(), content: .text(viewModel.text), scopes: [.global],
+                              paperColor: viewModel.color,
+                              normalizedPosition: CGPoint(x: 0.5, y: 0.5))
+        StickerStore.shared.add(sticker)
+        viewModel.text = ""
         hide()
+        if let screen = creationScreen {
+            (NSApp.delegate as? AppDelegate)?.overlay.show(on: screen)
+        }
     }
+
+    func windowDidResignKey(_ notification: Notification) {
+        // Keep the draft panel alive while interacting with its color menu.
+    }
+}
+
+
+private final class ComposerPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }

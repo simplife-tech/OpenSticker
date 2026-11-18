@@ -9,7 +9,7 @@ struct StickerLibraryView: View {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
         return store.stickers.reversed().filter { sticker in
             term.isEmpty || title(for: sticker).localizedStandardContains(term)
-                || sticker.scopes.contains { $0.displayName.localizedStandardContains(term) }
+
         }
     }
 
@@ -17,7 +17,7 @@ struct StickerLibraryView: View {
         VStack(spacing: 0) {
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("搜索内容或可见范围", text: $query)
+                TextField("搜索贴纸内容", text: $query)
                 Text("\(results.count) 张")
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -41,10 +41,7 @@ struct StickerLibraryView: View {
                         StickerThumbnail(content: sticker.content)
                         VStack(alignment: .leading, spacing: 5) {
                             Text(title(for: sticker)).lineLimit(2)
-                            Text(sticker.scopes.map(\.displayName).sorted().joined(separator: " · "))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+
                         }
                         Spacer()
                         Button("编辑") { editing = sticker }
@@ -127,47 +124,11 @@ private struct StickerLibraryEditor: View {
                 StickerThumbnail(content: sticker.content)
             }
 
-            Text("可见范围").font(.headline)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(scopeOptions, id: \.self) { scope in
-                        Toggle(scope.displayName, isOn: Binding(
-                            get: { scopes.contains(scope) },
-                            set: { enabled in
-                                if enabled { scopes.insert(scope) }
-                                else { scopes.remove(scope) }
-                            }
-                        ))
-                        .help(scope.displayName)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(height: 112)
-
             HStack {
-                Picker("类型", selection: $scopeKind) {
-                    ForEach(ScopeKind.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .labelsHidden()
-                TextField(targetPlaceholder, text: $target)
-                Button("添加范围") {
-                    if let scope = proposedScope {
-                        scopes.insert(scope)
-                        target = ""
-                    }
-                }
-                .disabled(proposedScope == nil)
-            }
-
-            HStack {
-                if scopes.isEmpty {
-                    Text("请选择至少一个范围").foregroundStyle(.secondary)
-                }
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("保存", action: save).keyboardShortcut(.defaultAction)
-                    .disabled(scopes.isEmpty || !hasContent)
+                    .disabled(!hasContent)
             }
         }
         .padding(22)
@@ -221,7 +182,7 @@ private struct StickerLibraryEditor: View {
         var content = sticker.content
         if case .text = content { content = .text(text) }
         do {
-            try store.edit(sticker.id, content: content, scopes: scopes)
+            try store.edit(sticker.id, content: content, scopes: [.global])
             dismiss()
         } catch {
             saveFailed = true

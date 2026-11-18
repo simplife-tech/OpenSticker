@@ -1,200 +1,122 @@
-//
-//  StickerCommandView.swift
-//  Sticker
-//
-//  Created by 周屹峰 on 2025/12/20.
-//
-
 import SwiftUI
-import AppKit
 
 struct StickerCommandView: View {
-
     @ObservedObject var viewModel: StickerCommandViewModel
-
-    let actions: [ActionItem]
-    let onAction: (ActionItem, String) -> Void
+    let onCreate: () -> Void
     let onClose: () -> Void
-
-    @State private var keyMonitor: Any?
-
-    private var canSave: Bool {
-        viewModel.pastedImage != nil || !viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
+    @State private var showingColors = false
+    @State private var handle = MarkdownStickerEditor.Handle()
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(NSColor.windowBackgroundColor))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("新建贴纸")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                Text("输入文字或粘贴图片，再选择贴纸的可见范围。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                // =====================
-                // 输入区（支持图片粘贴）
-                // =====================
-                VStack(spacing: 6) {
-
-                    ImagePasteTextView(viewModel: viewModel)
-                        .frame(height: 46)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.black.opacity(0.05))
-                    )
-
-                    // 🖼 图片回显
-                    if let image = viewModel.pastedImage {
-                        ZStack(alignment: .topTrailing) {
-                            Image(nsImage: image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 120)
-                                .cornerRadius(8)
-
-                            Button {
-                                viewModel.clearImage()
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.white)
-                                    .background(.black.opacity(0.6))
-                                    .clipShape(Circle())
-                            }
-                            .padding(6)
-                        }
-                        .transition(.opacity)
-                    }
+        VStack(spacing: 0) {
+            HStack {
+                Text("新建贴纸").font(.headline)
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+                        .frame(width: 24, height: 24)
                 }
-                .padding(.horizontal, 2)
-                .padding(.top, 2)
+                .buttonStyle(.plain)
+                .help("关闭并保留草稿")
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
 
-                // =====================
-                // Action 列表（你原来的）
-                // =====================
-                VStack(spacing: 2) {
-                    ForEach(actions.indices, id: \.self) { index in
-                        actionRow(actions[index], index: index)
-                    }
+            ZStack(alignment: .topLeading) {
+                if viewModel.text.isEmpty {
+                    Text("写点什么……")
+                        .foregroundStyle(.tertiary)
+                        .padding(.leading, 18)
+                        .padding(.top, 14)
+                        .allowsHitTesting(false)
                 }
-                .background(Color(NSColor.windowBackgroundColor))
-                .cornerRadius(10)
-
-                HStack {
-                    Text(canSave ? "↑ ↓ 选择范围   ↩ 保存" : "请输入文字或粘贴图片")
-                    Spacer()
-                    Text("Esc 关闭")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            .padding(16)
-        }
-        .padding(2)
-        .frame(width: 520)
-        .ignoresSafeArea(.container, edges: .top)
-        .onAppear {
-            installKeyMonitor()
-        }
-        .onDisappear {
-            removeKeyMonitor()
-        }
-        .onExitCommand { onClose() }
-    }
-
-    // MARK: - Action Row（未改）
-
-    private func actionRow(_ action: ActionItem, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(action.title)
-                .font(.system(size: 14, weight: .medium))
-            if let subtitle = action.subtitle {
-                Text(subtitle)
-                    .lineLimit(1)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            viewModel.selectedIndex == index
-            ? Color.accentColor.opacity(0.15)
-            : Color.clear
-        )
-        .cornerRadius(8)
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            if hovering {
-                viewModel.selectedIndex = index
-            }
-        }
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { selectAndExecute(index) }
-        .onTapGesture { selectAndExecute(index) }
-    }
-
-
-    private func installKeyMonitor() {
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.contains(.command),
-               event.charactersIgnoringModifiers == "v" {
-
-                if let image = NSPasteboard.general.readObjects(
-                    forClasses: [NSImage.self],
-                    options: nil
-                )?.first as? NSImage {
-
-                    viewModel.pastedImage = image
-                    return nil
-                }
-            }
-            switch event.keyCode {
-            case 126: // ↑
-                viewModel.selectedIndex = max(viewModel.selectedIndex - 1, 0)
-                return nil
-
-            case 125: // ↓
-                viewModel.selectedIndex = min(
-                    viewModel.selectedIndex + 1,
-                    actions.count - 1
+                MarkdownStickerEditor(
+                    source: viewModel.text, width: 420, isEditing: true, showsSource: false,
+                    handle: handle, onFocusChanged: { _ in },
+                    onChange: { viewModel.text = $0 }
                 )
-                return nil
-
-            case 36: // Enter
-                execute()
-                return nil
-
-            default:
-                return event
             }
+            .frame(height: 196)
+
+            Divider().opacity(0.4)
+            HStack(spacing: 8) {
+                Button {
+                    showingColors.toggle()
+                } label: {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(viewModel.color.tint.opacity(0.75))
+                            .frame(width: 15, height: 15)
+                            .overlay { Circle().strokeBorder(.primary.opacity(0.12)) }
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(height: 28)
+                    .background(.primary.opacity(0.04), in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help("贴纸颜色")
+                .popover(isPresented: $showingColors, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("贴纸颜色").font(.subheadline.weight(.semibold))
+                        LazyVGrid(columns: Array(repeating: GridItem(.fixed(26), spacing: 10), count: 6), spacing: 10) {
+                            ForEach(StickerPaperColor.allCases, id: \.self) { color in
+                                Button {
+                                    viewModel.color = color
+                                    showingColors = false
+                                } label: {
+                                    Circle()
+                                        .fill(color.tint.opacity(color == .neutral ? 0.18 : 0.70))
+                                        .frame(width: 26, height: 26)
+                                        .overlay {
+                                            if viewModel.color == color {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 10, weight: .bold))
+                                            }
+                                        }
+                                        .overlay { Circle().strokeBorder(.primary.opacity(0.10)) }
+                                }
+                                .buttonStyle(.plain)
+                                .help(color.title)
+                                .accessibilityLabel(color.title)
+                            }
+                        }
+                    }
+                    .padding(16)
+                }
+
+                Text("回车换行").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button(action: onCreate) {
+                    HStack(spacing: 10) {
+                        Text("创建").fontWeight(.medium)
+                        Text("⌘↵").foregroundStyle(.white.opacity(0.75))
+                    }
+                    .padding(.horizontal, 4)
+                }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.return, modifiers: .command)
+                    .disabled(viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-    }
+        .frame(width: 420)
 
-    private func removeKeyMonitor() {
-        if let monitor = keyMonitor {
-            NSEvent.removeMonitor(monitor)
-            keyMonitor = nil
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor))
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(viewModel.color.tint.opacity(0.12))
         }
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .onAppear {
+            DispatchQueue.main.async { handle.beginEditing(at: nil) }
+        }
+        .onExitCommand(perform: onClose)
     }
-
-
-    private func selectAndExecute(_ index: Int) {
-        viewModel.selectedIndex = index
-        execute()
-    }
-
-    private func execute() {
-        guard canSave, actions.indices.contains(viewModel.selectedIndex) else { return }
-        let action = actions[viewModel.selectedIndex]
-        onAction(action, viewModel.text)
-        onClose()
-    }
-
-    
 }
