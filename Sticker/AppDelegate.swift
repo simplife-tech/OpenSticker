@@ -12,6 +12,7 @@ import SwiftUI
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
 
+    private var pluginWindow: NSWindow?
     private var libraryWindow: NSWindow?
 
     let hotKey = HotKeyManager()
@@ -54,15 +55,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(library)
         menu.addItem(.separator())
         menu.addItem(resourceMenuItem())
+        let plugins = NSMenuItem(title: "插件管理…", action: #selector(managePlugins), keyEquivalent: "")
+        plugins.target = self
+        menu.addItem(plugins)
         menu.addItem(.separator())
         menu.addItem(reloadItem())
         menu.addItem(openFolderItem())
         menu.addItem(.separator())
+        let updates = NSMenuItem(title: "检查更新…", action: #selector(checkForUpdates), keyEquivalent: "")
+        updates.target = self
+        menu.addItem(updates)
         menu.addItem(quitItem())
 
         return menu
     }
     
+    @objc private func checkForUpdates(_ sender: NSMenuItem) {
+        guard !UpdateChecker.shared.isChecking else { return }
+        sender.title = "正在检查更新…"
+        UpdateChecker.shared.check {
+            sender.title = "检查更新…"
+        }
+    }
+
+    @objc private func managePlugins() {
+        if pluginWindow == nil {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 690, height: 440),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered, defer: false
+            )
+            window.title = "插件管理"
+            window.isReleasedWhenClosed = false
+            window.contentMinSize = NSSize(width: 530, height: 320)
+            window.contentView = NSHostingView(rootView: StickerPluginManagerView())
+            window.center()
+            pluginWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        pluginWindow?.makeKeyAndOrderFront(nil)
+    }
+
     @objc private func showStickerLibrary() {
         if libraryWindow == nil {
             let window = NSWindow(

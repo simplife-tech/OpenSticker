@@ -3,6 +3,7 @@ import AppKit
 import CoreText
 
 struct StickerView: View {
+    @ObservedObject private var plugins = StickerPluginRegistry.shared
     @Binding var sticker: Sticker
     @Binding var draggingID: UUID?
     @Binding var isOverDeleteBar: Bool
@@ -90,71 +91,75 @@ struct StickerView: View {
 
     private var expandedCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            switch sticker.content {
-            case .text(let source):
-                MarkdownStickerEditor(source: source, width: textSize.width, isEditing: isEditing,
-                                      showsSource: showsMarkdownSource,
-                                      handle: editorHandle, onFocusChanged: { isEditing = $0 }) { text in
-                    do {
-                        try onSaveText(text)
-                        unsavedText = nil
-                        saveFailed = false
-                    } catch {
-                        unsavedText = text
-                        saveFailed = true
+            if let state = sticker.plugin {
+                pluginBody(state)
+            } else {
+                switch sticker.content {
+                case .text(let source):
+                    MarkdownStickerEditor(source: source, width: textSize.width, isEditing: isEditing,
+                                          showsSource: showsMarkdownSource,
+                                          handle: editorHandle, onFocusChanged: { isEditing = $0 }) { text in
+                        do {
+                            try onSaveText(text)
+                            unsavedText = nil
+                            saveFailed = false
+                        } catch {
+                            unsavedText = text
+                            saveFailed = true
+                        }
                     }
-                }
-                .frame(width: textSize.width, height: textSize.height)
-                .allowsHitTesting(isEditing)
-                .overlay {
-                    if !isEditing {
-                        Color.clear
+                    .frame(width: textSize.width, height: textSize.height)
+                    .allowsHitTesting(isEditing)
+                    .overlay {
+                        if !isEditing {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .gesture(moveGesture)
+                                .simultaneousGesture(
+                                    SpatialTapGesture(count: 2)
+                                        .exclusively(before: SpatialTapGesture())
+                                        .onEnded { tap in
+                                            switch tap {
+                                            case .first(let tap):
+                                                onEdit()
+                                                isEditing = true
+                                                editorHandle.beginEditing(at: tap.location)
+                                            case .second(let tap):
+                                                editorHandle.previewClick(at: tap.location)
+                                            }
+                                        }
+                                )
+                                .accessibilityAction(named: Text("编辑贴纸")) {
+                                    onEdit()
+                                    isEditing = true
+                                    editorHandle.beginEditing(at: nil)
+                                }
+                        }
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        StickerResizeHandle(
+                            size: Binding(get: { textSize }, set: { sticker.textSize = $0 }),
+                            minimum: CGSize(width: 80, height: 90),
+                            screenSize: screenSize,
+                            onResize: persistSize
+                        )
+                        .padding(4)
+                        .opacity(showsTools ? 1 : 0)
+                        .allowsHitTesting(showsTools)
+                    }
+                case .image(let payload):
+                    if let image = NSImage(contentsOf: payload.fileURL) {
+                        StickerImageView(image: image, size: $sticker.imageSize, screenSize: screenSize, showsTools: showsTools, onResize: persistSize)
+                            .padding(10)
                             .contentShape(Rectangle())
                             .gesture(moveGesture)
-                            .simultaneousGesture(
-                                SpatialTapGesture(count: 2)
-                                    .exclusively(before: SpatialTapGesture())
-                                    .onEnded { tap in
-                                        switch tap {
-                                        case .first(let tap):
-                                            onEdit()
-                                            isEditing = true
-                                            editorHandle.beginEditing(at: tap.location)
-                                        case .second(let tap):
-                                            editorHandle.previewClick(at: tap.location)
-                                        }
-                                    }
-                            )
-                            .accessibilityAction(named: Text("编辑贴纸")) {
-                                onEdit()
-                                isEditing = true
-                                editorHandle.beginEditing(at: nil)
-                            }
+                    } else {
+                        Label("图片不可用", systemImage: "exclamationmark.triangle")
+                            .padding(14)
                     }
                 }
-                .overlay(alignment: .bottomTrailing) {
-                    StickerResizeHandle(
-                        size: Binding(get: { textSize }, set: { sticker.textSize = $0 }),
-                        minimum: CGSize(width: 80, height: 90),
-                        screenSize: screenSize,
-                        onResize: persistSize
-                    )
-                    .padding(4)
-                    .opacity(showsTools ? 1 : 0)
-                    .allowsHitTesting(showsTools)
-                }
-            case .image(let payload):
-                if let image = NSImage(contentsOf: payload.fileURL) {
-                    StickerImageView(image: image, size: $sticker.imageSize, screenSize: screenSize, showsTools: showsTools, onResize: persistSize)
-                        .padding(10)
-                        .contentShape(Rectangle())
-                        .gesture(moveGesture)
-                } else {
-                    Label("图片不可用", systemImage: "exclamationmark.triangle")
-                        .padding(14)
-                }
-            }
 
+            }
             if saveFailed {
                 Text("保存失败。文字仍在编辑区，可先复制备份。")
                     .font(.caption)
@@ -172,7 +177,7 @@ struct StickerView: View {
         }
         .overlay(alignment: .topTrailing) {
             HStack(spacing: 2) {
-                if case .text = sticker.content {
+                if sticker.plugin == nil, case .text = sticker.content {
                     Button {
                         if editorHandle.editor?.hasMarkedText() == true { return }
                         showsMarkdownSource.toggle()
@@ -209,6 +214,42 @@ struct StickerView: View {
             .onContinuousHover { phase in
                 if case .active = phase { NSCursor.arrow.set() }
             }
+        }
+    }
+
+    private func pluginBody(_ state: StickerPluginState) -> some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(.secondary.opacity(0.45))
+                .frame(width: 28, height: 3)
+                .frame(maxWidth: .infinity)
+                .frame(height: 18)
+                .contentShape(Rectangle())
+                .gesture(moveGesture)
+                .help("拖动贴纸")
+            if let plugin = plugins.plugin(for: state.pluginID) {
+                StickerPluginWebView(plugin: plugin, mode: .card, values: Binding(
+                    get: { sticker.plugin?.values ?? [:] },
+                    set: { sticker.plugin?.values = $0; persistSize() }
+                ), onFocus: onEdit, onDrag: { translation, point in
+                    moveSticker(translation)
+                    isOverDeleteBar = deleteTarget.contains(point)
+                }, onDragEnded: { point in
+                    finishMove(shouldDelete: point.map { deleteTarget.contains($0) } ?? false)
+                })
+            } else {
+                ContentUnavailableView("插件未安装", systemImage: "puzzlepiece")
+            }
+            Color.clear.frame(height: 30)
+        }
+        .frame(width: textSize.width, height: textSize.height)
+        .overlay(alignment: .bottomTrailing) {
+            StickerResizeHandle(size: Binding(get: { textSize }, set: { sticker.textSize = $0 }),
+                                minimum: CGSize(width: 180, height: 140),
+                                screenSize: screenSize, onResize: persistSize)
+                .padding(4)
+                .opacity(showsTools ? 1 : 0)
+                .allowsHitTesting(showsTools)
         }
     }
 
@@ -250,6 +291,11 @@ struct StickerView: View {
     }
 
     private var collapsedTitle: String {
+        if let state = sticker.plugin {
+            let title = state.values["title"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !title.isEmpty { return title }
+            if let plugin = plugins.plugin(for: state.pluginID) { return plugin.name }
+        }
         switch sticker.content {
         case .image:
             return "图片贴纸"
@@ -319,26 +365,33 @@ struct StickerView: View {
     private var moveGesture: some Gesture {
         DragGesture(minimumDistance: 3, coordinateSpace: .named("stickerOverlay"))
             .onChanged { value in
-                guard screenSize.width > 0, screenSize.height > 0 else { return }
-                if dragOrigin == nil {
-                    dragOrigin = sticker.normalizedPosition
-                    draggingID = sticker.id
-                }
-                guard let origin = dragOrigin else { return }
-                sticker.normalizedPosition = CGPoint(
-                    x: min(max(origin.x + value.translation.width / screenSize.width, 0), 1),
-                    y: min(max(origin.y + value.translation.height / screenSize.height, 0), 1)
-                )
+                moveSticker(value.translation)
                 isOverDeleteBar = deleteTarget.contains(value.location)
             }
             .onEnded { value in
-                let shouldDelete = deleteTarget.contains(value.location)
-                let id = sticker.id
-                dragOrigin = nil
-                draggingID = nil
-                isOverDeleteBar = false
-                if shouldDelete { onDelete(id) }
+                finishMove(shouldDelete: deleteTarget.contains(value.location))
             }
+    }
+
+    private func moveSticker(_ translation: CGSize) {
+        guard screenSize.width > 0, screenSize.height > 0 else { return }
+        if dragOrigin == nil {
+            dragOrigin = sticker.normalizedPosition
+            draggingID = sticker.id
+        }
+        guard let origin = dragOrigin else { return }
+        sticker.normalizedPosition = CGPoint(
+            x: min(max(origin.x + translation.width / screenSize.width, 0), 1),
+            y: min(max(origin.y + translation.height / screenSize.height, 0), 1)
+        )
+    }
+
+    private func finishMove(shouldDelete: Bool) {
+        let id = sticker.id
+        dragOrigin = nil
+        draggingID = nil
+        isOverDeleteBar = false
+        if shouldDelete { onDelete(id) }
     }
 
     private var appearanceControls: some View {
@@ -673,9 +726,6 @@ struct MarkdownStickerEditor: NSViewRepresentable {
             return true
         }
         private var styledSource = NSAttributedString()
-        private static let imagePattern = try! NSRegularExpression(
-            pattern: #"!\[[^\]\r\n]*\]\(images/([A-Za-z0-9_-]+\.png)\)"#
-        )
 
         func load(_ source: String, into editor: NSTextView) {
             editor.string = source
@@ -689,7 +739,7 @@ struct MarkdownStickerEditor: NSViewRepresentable {
         private func renderImages(in editor: NSTextView) {
             guard let storage = editor.textStorage else { return }
             let source = storage.string as NSString
-            let matches = Self.imagePattern.matches(in: source as String, range: NSRange(location: 0, length: source.length))
+            let matches = ImageStore.markdownImagePattern.matches(in: source as String, range: NSRange(location: 0, length: source.length))
             guard !matches.isEmpty else { return }
 
             func offset(_ position: Int, replacing range: NSRange) -> Int {

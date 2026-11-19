@@ -9,6 +9,10 @@ import AppKit
 
 final class ImageStore {
 
+    static let markdownImagePattern = try! NSRegularExpression(
+        pattern: #"!\[[^\]\r\n]*\]\(images/([A-Za-z0-9_-]+\.png)\)"#
+    )
+
     static let shared = ImageStore()
 
     private let location = StickerResourceLocation.shared
@@ -41,6 +45,7 @@ final class ImageStore {
     }
 
     func remove(filename: String) {
+        guard filename.range(of: #"^[A-Za-z0-9_-]+\.png$"#, options: .regularExpression) != nil else { return }
         let url = imageURL(for: filename)
 
         guard FileManager.default.fileExists(atPath: url.path) else {

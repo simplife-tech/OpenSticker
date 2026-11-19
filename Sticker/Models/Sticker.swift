@@ -54,6 +54,7 @@ struct Sticker: Identifiable, Equatable, Codable {
     let id: UUID
     var content: StickerContent
     var scopes: Set<StickerScope>
+    var plugin: StickerPluginState?
     var isCollapsed: Bool?
     var paperColor: StickerPaperColor?
     var paperOpacity: Double?

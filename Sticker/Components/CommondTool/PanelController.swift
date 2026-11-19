@@ -50,12 +50,18 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     private func create() {
-        guard !viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let sticker = Sticker(id: UUID(), content: .text(viewModel.text), scopes: [.global],
+        let plugin = StickerPluginRegistry.shared.plugins.first { $0.id == viewModel.pluginID }
+        guard plugin != nil || !viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let state = plugin.map { StickerPluginState(pluginID: $0.id, values: viewModel.pluginValues) }
+        let sticker = Sticker(id: UUID(), content: .text(plugin?.name ?? viewModel.text), scopes: [.global],
+                              plugin: state,
                               paperColor: viewModel.color,
+                              textSize: plugin == nil ? nil : CGSize(width: 280, height: 350),
                               normalizedPosition: CGPoint(x: 0.5, y: 0.5))
         StickerStore.shared.add(sticker)
         viewModel.text = ""
+        viewModel.pluginID = ""
+        viewModel.pluginValues = [:]
         hide()
         if let screen = creationScreen {
             (NSApp.delegate as? AppDelegate)?.overlay.show(on: screen)

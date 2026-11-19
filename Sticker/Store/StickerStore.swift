@@ -89,19 +89,40 @@ final class StickerStore: ObservableObject {
     }
 
     func remove(_ id: UUID) {
-        guard let i = stickers.firstIndex(where: { $0.id == id }) else {
-                return
-            }
+        guard let sticker = stickers.first(where: { $0.id == id }) else { return }
+        let remaining = stickers.filter { $0.id != id }
 
-        let sticker = stickers[i]
-        if case .image(let payload) = sticker.content {
-            ImageStore.shared.remove(filename: payload.filename)
+        do {
+            try JSONEncoder().encode(remaining).write(to: fileURL, options: .atomic)
+        } catch {
+            NSApp.presentError(error)
+            return
         }
-        stickers.removeAll { $0.id == sticker.id }
+
+        stickers = remaining
         index.remove(sticker)
-        save(stickers)
+
+        let candidates = imageFilenames(in: sticker.content)
+        guard !candidates.isEmpty else { return }
+        let referenced = Set(remaining.flatMap { imageFilenames(in: $0.content) }.map { $0.lowercased() })
+        for filename in candidates where !referenced.contains(filename.lowercased()) {
+            ImageStore.shared.remove(filename: filename)
+        }
     }
-    
+
+    private func imageFilenames(in content: StickerContent) -> Set<String> {
+        switch content {
+        case .image(let payload):
+            return [payload.filename]
+        case .text(let text):
+            let source = text as NSString
+            let range = NSRange(location: 0, length: source.length)
+            return Set(ImageStore.markdownImagePattern.matches(in: text, range: range).map {
+                source.substring(with: $0.range(at: 1))
+            })
+        }
+    }
+
     private func rebuildIndex() {
         index.clear()
         for sticker in stickers {
