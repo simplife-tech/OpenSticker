@@ -15,6 +15,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     func show(screen: NSScreen, initialText: String?) {
         creationScreen = screen
+        viewModel.groupID = StickerStore.shared.activeGroupID
         let view = StickerCommandView(viewModel: viewModel, onCreate: { [weak self] in
             self?.create()
         }, onClose: { [weak self] in self?.hide() })
@@ -53,12 +54,15 @@ final class PanelController: NSObject, NSWindowDelegate {
         let plugin = StickerPluginRegistry.shared.plugins.first { $0.id == viewModel.pluginID }
         guard plugin != nil || !viewModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let state = plugin.map { StickerPluginState(pluginID: $0.id, values: viewModel.pluginValues) }
+        let store = StickerStore.shared
         let sticker = Sticker(id: UUID(), content: .text(plugin?.name ?? viewModel.text), scopes: [.global],
+                              groupID: store.validGroupID(viewModel.groupID),
                               plugin: state,
                               paperColor: viewModel.color,
                               textSize: plugin == nil ? nil : CGSize(width: 280, height: 350),
                               normalizedPosition: CGPoint(x: 0.5, y: 0.5))
-        StickerStore.shared.add(sticker)
+        store.add(sticker)
+        store.selectGroup(sticker.groupID)
         viewModel.text = ""
         viewModel.pluginID = ""
         viewModel.pluginValues = [:]

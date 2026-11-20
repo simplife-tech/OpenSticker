@@ -6,7 +6,7 @@ struct DeleteBarView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Label(active ? "松手删除贴纸" : "拖到这里删除贴纸",
+        Label(active ? L10n.text("松手删除贴纸") : L10n.text("拖到这里删除贴纸"),
               systemImage: active ? "trash.fill" : "trash")
             .font(.callout.weight(.semibold))
             .foregroundStyle(active ? Color.white : .primary)

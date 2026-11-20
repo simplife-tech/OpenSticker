@@ -35,13 +35,13 @@ final class UpdateChecker {
                       let latest = Self.versionParts(tag) else { throw URLError(.cannotParseResponse) }
 
                 if installed.lexicographicallyPrecedes(latest) {
-                    show("发现新版本 \(tag)", detail: "当前版本为 \(current)。可以前往 GitHub 下载新版。",
+                    show(L10n.format("发现新版本 %@", tag), detail: L10n.format("当前版本为 %@。可以前往 GitHub 下载新版。", current),
                          offerDownload: true)
                 } else {
-                    show("当前已是最新版本", detail: "Sticker \(current)")
+                    show(L10n.text("当前已是最新版本"), detail: "Sticker \(current)")
                 }
             } catch {
-                show("无法检查更新", detail: "暂时无法获取 GitHub 发布信息，请稍后重试。")
+                show(L10n.text("无法检查更新"), detail: L10n.text("暂时无法获取 GitHub 发布信息，请稍后重试。"))
             }
         }
     }
@@ -88,14 +88,14 @@ final class UpdateChecker {
 
     @MainActor func requestToken(replacing: Bool, importing: Bool = false) -> String? {
         let alert = NSAlert()
-        alert.messageText = importing ? "访问私有插件仓库"
-            : replacing ? "GitHub 令牌无法读取版本" : "检查私有仓库的版本"
-        alert.informativeText = "请输入对 simplife-tech/Sticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。"
+        alert.messageText = importing ? L10n.text("访问私有插件仓库")
+            : replacing ? L10n.text("GitHub 令牌无法读取版本") : L10n.text("检查私有仓库的版本")
+        alert.informativeText = L10n.text("请输入对 simplife-tech/Sticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。")
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 290, height: 24))
-        field.placeholderString = "GitHub 令牌"
+        field.placeholderString = L10n.text("GitHub 令牌")
         alert.accessoryView = field
-        alert.addButton(withTitle: importing ? "继续导入" : "检查")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: importing ? L10n.text("继续导入") : L10n.text("检查"))
+        alert.addButton(withTitle: L10n.text("取消"))
         NSApp.activate(ignoringOtherApps: true)
         alert.window.initialFirstResponder = field
         guard alert.runModal() == .alertFirstButtonReturn else { return nil }
@@ -103,7 +103,7 @@ final class UpdateChecker {
         return token.isEmpty ? nil : token
     }
 
-    private static func versionParts(_ value: String) -> [Int]? {
+    static func versionParts(_ value: String) -> [Int]? {
         let version = value.hasPrefix("v") ? String(value.dropFirst()) : value
         let fields = version.split(separator: ".", omittingEmptySubsequences: false)
         let parts = fields.compactMap { Int($0) }
@@ -116,8 +116,8 @@ final class UpdateChecker {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = detail
-        if offerDownload { alert.addButton(withTitle: "前往下载") }
-        alert.addButton(withTitle: offerDownload ? "稍后" : "好")
+        if offerDownload { alert.addButton(withTitle: L10n.text("前往下载")) }
+        alert.addButton(withTitle: offerDownload ? L10n.text("稍后") : L10n.text("好"))
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn, offerDownload {
             NSWorkspace.shared.open(releasePage)

@@ -1,6 +1,7 @@
 import Foundation
 
 struct GitHubPluginSource {
+    let sourceURL: URL
     let owner: String
     let repository: String
     let ref: String
@@ -20,6 +21,7 @@ struct GitHubPluginSource {
               parts.dropFirst(3).allSatisfy({ $0 != "." && $0 != ".." && !$0.contains("/") }) else {
             throw Failure.invalidLink
         }
+        sourceURL = url
         owner = parts[0]
         repository = parts[1]
         ref = parts[3]
@@ -75,10 +77,10 @@ struct GitHubPluginSource {
 
         var errorDescription: String? {
             switch self {
-            case .invalidLink: return "请输入 GitHub 上的插件文件夹链接，例如 github.com/组织/仓库/tree/main/插件目录。"
-            case .missingFile(let name): return "插件目录中缺少 \(name)。"
-            case .http(404): return "找不到插件目录，或当前没有读取权限。"
-            case .http(let status): return "GitHub 下载失败（HTTP \(status)）。"
+            case .invalidLink: return L10n.text("请输入 GitHub 上的插件文件夹链接，例如 github.com/组织/仓库/tree/main/插件目录。")
+            case .missingFile(let name): return L10n.format("插件目录中缺少 %@。", name)
+            case .http(404): return L10n.text("找不到插件目录，或当前没有读取权限。")
+            case .http(let status): return L10n.format("GitHub 下载失败（HTTP %lld）。", status)
             }
         }
 

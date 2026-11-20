@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct StickerCommandView: View {
+    @ObservedObject private var localization = L10n.shared
+    @ObservedObject private var store = StickerStore.shared
     @ObservedObject var viewModel: StickerCommandViewModel
     @ObservedObject private var registry = StickerPluginRegistry.shared
     private var plugin: StickerPlugin? { registry.plugins.first { $0.id == viewModel.pluginID } }
@@ -20,7 +22,7 @@ struct StickerCommandView: View {
                 Image(systemName: plugin == nil ? "note.text" : "puzzlepiece.extension")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
-                Text(plugin?.name ?? "普通贴纸")
+                Text(plugin?.name ?? L10n.text("普通贴纸"))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
@@ -36,12 +38,12 @@ struct StickerCommandView: View {
         .onHover { hovering in
             typeButtonHovered = hovering
         }
-        .accessibilityLabel("贴纸类型")
-        .accessibilityValue(plugin?.name ?? "普通贴纸")
+        .accessibilityLabel(L10n.text("贴纸类型"))
+        .accessibilityValue(plugin?.name ?? L10n.text("普通贴纸"))
         .popover(isPresented: $showingTypes, arrowEdge: .bottom) {
             ScrollView {
                 VStack(spacing: 3) {
-                    typeRow(id: "", name: "普通贴纸", icon: "note.text")
+                    typeRow(id: "", name: L10n.text("普通贴纸"), icon: "note.text")
                     ForEach(registry.plugins) { item in
                         typeRow(id: item.id, name: item.name, icon: "puzzlepiece.extension")
                     }
@@ -112,12 +114,26 @@ struct StickerCommandView: View {
             HStack {
                 typeSelector
                 Spacer()
+                if !store.groups.isEmpty {
+                    Menu {
+                        Button(L10n.text("默认")) { viewModel.groupID = nil }
+                        ForEach(store.groups) { group in
+                            Button(group.name) { viewModel.groupID = group.id }
+                        }
+                    } label: {
+                        Label(store.groupName(viewModel.groupID), systemImage: "square.stack")
+                            .lineLimit(1)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    .accessibilityLabel(L10n.text("保存到分组"))
+                }
                 Button(action: onClose) {
                     Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .help("关闭并保留草稿")
+                .help(L10n.text("关闭并保留草稿"))
             }
             .padding(.horizontal, 18)
             .padding(.top, 16)
@@ -130,7 +146,7 @@ struct StickerCommandView: View {
                 } else {
                     ZStack(alignment: .topLeading) {
                         if viewModel.text.isEmpty {
-                            Text("写点什么……")
+                            Text(L10n.text("写点什么……"))
                                 .foregroundStyle(.tertiary)
                                 .padding(.leading, 18)
                                 .padding(.top, 14)
@@ -166,10 +182,10 @@ struct StickerCommandView: View {
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .help("贴纸颜色")
+                .help(L10n.text("贴纸颜色"))
                 .popover(isPresented: $showingColors, arrowEdge: .bottom) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("贴纸颜色").font(.subheadline.weight(.semibold))
+                        Text(L10n.text("贴纸颜色")).font(.subheadline.weight(.semibold))
                         LazyVGrid(columns: Array(repeating: GridItem(.fixed(26), spacing: 10), count: 6), spacing: 10) {
                             ForEach(StickerPaperColor.allCases, id: \.self) { color in
                                 Button {
@@ -196,11 +212,11 @@ struct StickerCommandView: View {
                     .padding(16)
                 }
 
-                Text("回车换行").font(.caption).foregroundStyle(.secondary)
+                Text(L10n.text("回车换行")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(action: onCreate) {
                     HStack(spacing: 10) {
-                        Text("创建").fontWeight(.medium)
+                        Text(L10n.text("创建")).fontWeight(.medium)
                         Text("⌘↵").foregroundStyle(.white.opacity(0.75))
                     }
                     .padding(.horizontal, 4)

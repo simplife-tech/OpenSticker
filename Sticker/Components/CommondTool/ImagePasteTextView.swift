@@ -32,7 +32,7 @@ struct ImagePasteTextView: NSViewRepresentable {
         textView.isSelectable = true
 
         // ===== Placeholder =====
-        let placeholder = NSTextField(labelWithString: "输入文字或粘贴图片")
+        let placeholder = NSTextField(labelWithString: L10n.text("输入文字或粘贴图片"))
         placeholder.font = NSFont.systemFont(ofSize: 18)
         placeholder.textColor = NSColor.secondaryLabelColor
         placeholder.backgroundColor = .clear

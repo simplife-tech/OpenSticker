@@ -54,6 +54,7 @@ struct Sticker: Identifiable, Equatable, Codable {
     let id: UUID
     var content: StickerContent
     var scopes: Set<StickerScope>
+    var groupID: UUID?
     var plugin: StickerPluginState?
     var isCollapsed: Bool?
     var paperColor: StickerPaperColor?
@@ -124,24 +125,24 @@ enum StickerPaperColor: String, Codable, CaseIterable {
 
     var title: String {
         switch self {
-        case .lemon: return "柠檬黄"
-        case .apricot: return "杏桃色"
-        case .tangerine: return "橘红"
-        case .rose: return "玫瑰粉"
-        case .lime: return "青柠绿"
-        case .sage: return "鼠尾草绿"
-        case .jade: return "翡翠绿"
-        case .aqua: return "湖水青"
-        case .periwinkle: return "长春花蓝"
-        case .orchid: return "兰花紫"
-        case .sand: return "暖沙色"
-        case .slate: return "石板灰"
-        case .neutral: return "中性"
-        case .honey: return "蜂蜜黄"
-        case .blush: return "珊瑚粉"
-        case .mint: return "薄荷绿"
-        case .sky: return "天空蓝"
-        case .lavender: return "薰衣草紫"
+        case .lemon: return L10n.text("柠檬黄")
+        case .apricot: return L10n.text("杏桃色")
+        case .tangerine: return L10n.text("橘红")
+        case .rose: return L10n.text("玫瑰粉")
+        case .lime: return L10n.text("青柠绿")
+        case .sage: return L10n.text("鼠尾草绿")
+        case .jade: return L10n.text("翡翠绿")
+        case .aqua: return L10n.text("湖水青")
+        case .periwinkle: return L10n.text("长春花蓝")
+        case .orchid: return L10n.text("兰花紫")
+        case .sand: return L10n.text("暖沙色")
+        case .slate: return L10n.text("石板灰")
+        case .neutral: return L10n.text("中性")
+        case .honey: return L10n.text("蜂蜜黄")
+        case .blush: return L10n.text("珊瑚粉")
+        case .mint: return L10n.text("薄荷绿")
+        case .sky: return L10n.text("天空蓝")
+        case .lavender: return L10n.text("薰衣草紫")
         }
     }
 

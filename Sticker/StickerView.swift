@@ -3,6 +3,7 @@ import AppKit
 import CoreText
 
 struct StickerView: View {
+    @ObservedObject private var localization = L10n.shared
     @ObservedObject private var plugins = StickerPluginRegistry.shared
     @Binding var sticker: Sticker
     @Binding var draggingID: UUID?
@@ -28,6 +29,10 @@ struct StickerView: View {
     @State private var saveFailed = false
     @State private var copied = false
     @State private var unsavedText: String?
+
+    private let collapsedHeight: CGFloat = 36
+    private let imagePadding: CGFloat = 10
+    private let missingImageHeight: CGFloat = 46
 
     private var isCollapsed: Bool { sticker.isCollapsed ?? false }
     private var paperColor: StickerPaperColor { sticker.paperColor ?? .honey }
@@ -129,7 +134,7 @@ struct StickerView: View {
                                             }
                                         }
                                 )
-                                .accessibilityAction(named: Text("编辑贴纸")) {
+                                .accessibilityAction(named: Text(L10n.text("编辑贴纸"))) {
                                     onEdit()
                                     isEditing = true
                                     editorHandle.beginEditing(at: nil)
@@ -150,18 +155,19 @@ struct StickerView: View {
                 case .image(let payload):
                     if let image = NSImage(contentsOf: payload.fileURL) {
                         StickerImageView(image: image, size: $sticker.imageSize, screenSize: screenSize, showsTools: showsTools, onResize: persistSize)
-                            .padding(10)
+                            .padding(imagePadding)
                             .contentShape(Rectangle())
                             .gesture(moveGesture)
                     } else {
-                        Label("图片不可用", systemImage: "exclamationmark.triangle")
-                            .padding(14)
+                        Label(L10n.text("图片不可用"), systemImage: "exclamationmark.triangle")
+                            .padding(.horizontal, 14)
+                            .frame(height: missingImageHeight)
                     }
                 }
 
             }
             if saveFailed {
-                Text("保存失败。文字仍在编辑区，可先复制备份。")
+                Text(L10n.text("保存失败。文字仍在编辑区，可先复制备份。"))
                     .font(.caption)
                     .foregroundStyle(.red)
                     .padding(8)
@@ -189,8 +195,8 @@ struct StickerView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(showsMarkdownSource ? "显示渲染结果" : "显示 Markdown 源码")
-                    .help(showsMarkdownSource ? "显示渲染结果" : "显示 Markdown 源码")
+                    .accessibilityLabel(showsMarkdownSource ? L10n.text("显示渲染结果") : L10n.text("显示 Markdown 源码"))
+                    .help(showsMarkdownSource ? L10n.text("显示渲染结果") : L10n.text("显示 Markdown 源码"))
                 }
 
                 Button {
@@ -203,8 +209,8 @@ struct StickerView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("折叠贴纸")
-                .help("折叠贴纸")
+                .accessibilityLabel(L10n.text("折叠贴纸"))
+                .help(L10n.text("折叠贴纸"))
                 .disabled(saveFailed)
             }
             .padding(4)
@@ -226,7 +232,7 @@ struct StickerView: View {
                 .frame(height: 18)
                 .contentShape(Rectangle())
                 .gesture(moveGesture)
-                .help("拖动贴纸")
+                .help(L10n.text("拖动贴纸"))
             if let plugin = plugins.plugin(for: state.pluginID) {
                 StickerPluginWebView(plugin: plugin, mode: .card, values: Binding(
                     get: { sticker.plugin?.values ?? [:] },
@@ -238,7 +244,7 @@ struct StickerView: View {
                     finishMove(shouldDelete: point.map { deleteTarget.contains($0) } ?? false)
                 })
             } else {
-                ContentUnavailableView("插件未安装", systemImage: "puzzlepiece")
+                ContentUnavailableView(L10n.text("插件未安装"), systemImage: "puzzlepiece")
             }
             Color.clear.frame(height: 30)
         }
@@ -270,15 +276,15 @@ struct StickerView: View {
                 .accessibilityHidden(true)
         }
         .padding(.horizontal, 12)
-        .frame(width: collapsedWidth, height: 36)
+        .frame(width: collapsedWidth, height: collapsedHeight)
         .contentShape(Rectangle())
         .gesture(moveGesture)
         .simultaneousGesture(TapGesture().onEnded { setCollapsed(false) })
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("展开贴纸")
+        .accessibilityHint(L10n.text("展开贴纸"))
         .accessibilityAction { setCollapsed(false) }
-        .help("点击展开 · 拖动移动")
+        .help(L10n.text("点击展开 · 拖动移动"))
     }
 
     private var collapsedWidth: CGFloat {
@@ -298,12 +304,12 @@ struct StickerView: View {
         }
         switch sticker.content {
         case .image:
-            return "图片贴纸"
+            return L10n.text("图片贴纸")
         case .text(let source):
             for line in source.split(whereSeparator: \.isNewline) {
                 let text = line.trimmingCharacters(in: .whitespaces)
                 if text.hasPrefix("```") { continue }
-                if text.hasPrefix("![") { return "图片贴纸" }
+                if text.hasPrefix("![") { return L10n.text("图片贴纸") }
                 let content = text.replacingOccurrences(
                     of: #"^(?:#{1,6}|>|[-+*](?: \[[ xX]\])?)[ \t]+"#,
                     with: "",
@@ -314,21 +320,42 @@ struct StickerView: View {
                     .map { String($0.characters) } ?? content
                 if !rendered.isEmpty { return rendered }
             }
-            return "空白贴纸"
+            return L10n.text("空白贴纸")
         }
     }
 
     private func setCollapsed(_ collapsed: Bool) {
-        guard !collapsed || !saveFailed else { return }
+        guard collapsed != isCollapsed, !collapsed || !saveFailed else { return }
         if collapsed {
             editorHandle.editor?.window?.makeFirstResponder(nil)
             isEditing = false
             showingAppearance = false
         }
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
-            sticker.isCollapsed = collapsed
+        var updated = sticker
+        updated.isCollapsed = collapsed
+        if screenSize.height > 0 {
+            // Position stores the center; shift it by half the height change to keep the top fixed.
+            let difference = expandedHeight - collapsedHeight
+            updated.normalizedPosition.y += (collapsed ? -difference : difference) / (2 * screenSize.height)
+        }
+        // Swap the card size and its center together, without moving the outgoing card.
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            sticker = updated
         }
         persistSize()
+    }
+
+    private var expandedHeight: CGFloat {
+        if sticker.plugin != nil { return textSize.height }
+        switch sticker.content {
+        case .text:
+            return textSize.height
+        case .image(let payload):
+            return NSImage(contentsOf: payload.fileURL) == nil
+                ? missingImageHeight : sticker.imageSize.height + 2 * imagePadding
+        }
     }
 
     private var toolBar: some View {
@@ -342,8 +369,8 @@ struct StickerView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("贴纸外观")
-            .help("贴纸外观")
+            .accessibilityLabel(L10n.text("贴纸外观"))
+            .help(L10n.text("贴纸外观"))
             .popover(isPresented: $showingAppearance, arrowEdge: .bottom) {
                 appearanceControls
             }
@@ -353,8 +380,8 @@ struct StickerView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("复制贴纸")
-            .help("复制贴纸")
+            .accessibilityLabel(L10n.text("复制贴纸"))
+            .help(L10n.text("复制贴纸"))
         }
         .background(.regularMaterial, in: Capsule())
         .onContinuousHover { phase in
@@ -396,7 +423,7 @@ struct StickerView: View {
 
     private var appearanceControls: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("贴纸外观").font(.headline)
+            Text(L10n.text("贴纸外观")).font(.headline)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 10) {
                 ForEach(StickerPaperColor.allCases, id: \.self) { color in
                     Button {
@@ -421,7 +448,7 @@ struct StickerView: View {
                 }
             }
             HStack {
-                Text("底纸不透明度")
+                Text(L10n.text("底纸不透明度"))
                 Spacer()
                 Text(paperOpacity.formatted(.percent.precision(.fractionLength(0))))
                     .monospacedDigit()
@@ -434,7 +461,7 @@ struct StickerView: View {
                 onEditingChanged: { editing in
                     if !editing { persistSize() }
                 },
-                label: { Text("底纸不透明度") }
+                label: { Text(L10n.text("底纸不透明度")) }
             )
             .labelsHidden()
         }
@@ -1059,8 +1086,8 @@ struct StickerResizeHandle: View {
 
     var body: some View {
         handle
-            .accessibilityLabel("调整贴纸大小")
-            .help("拖动调整贴纸大小")
+            .accessibilityLabel(L10n.text("调整贴纸大小"))
+            .help(L10n.text("拖动调整贴纸大小"))
             .onContinuousHover { phase in
                 if case .active = phase { NSCursor.arrow.set() }
             }

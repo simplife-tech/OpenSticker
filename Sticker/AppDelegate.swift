@@ -18,7 +18,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let hotKey = HotKeyManager()
     let store = StickerStore.shared
     let contextController = ContextController()
-    lazy var overlay = OverlayWindowController(store: store, contextController: contextController)
+    lazy var overlay = OverlayWindowController(store: store, contextController: contextController) { [weak self] in
+        self?.showStickerLibrary()
+    }
 
     private let location = StickerResourceLocation.shared
 
@@ -35,6 +37,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
+        hotKey.onStepGroup = { [weak self] offset in
+            guard let self, self.overlay.isVisible else { return }
+            self.store.stepGroup(by: offset)
+        }
+        overlay.onGroupShortcutAvailability = { [weak self] enabled in
+            self?.hotKey.setGroupShortcutsEnabled(enabled)
+        }
         hotKey.start()
 
         // 不显示 Dock 图标
@@ -50,19 +59,43 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(menuItem("新建贴纸…", icon: "plus.square", action: #selector(newSticker),
+        menu.addItem(menuItem(L10n.text("新建贴纸…"), icon: "plus.square", action: #selector(newSticker),
                               key: "n", modifiers: .option))
-        menu.addItem(menuItem("显示贴纸", icon: "rectangle.on.rectangle", action: #selector(toggleStickers),
+        menu.addItem(menuItem(L10n.text("显示贴纸"), icon: "rectangle.on.rectangle", action: #selector(toggleStickers),
                               key: "\t", modifiers: .option))
-        menu.addItem(menuItem("管理贴纸…", icon: "note.text", action: #selector(showStickerLibrary)))
+        menu.addItem(menuItem(L10n.text("管理贴纸…"), icon: "note.text", action: #selector(showStickerLibrary)))
         menu.addItem(.separator())
-        menu.addItem(menuItem("插件管理…", icon: "puzzlepiece.extension", action: #selector(managePlugins)))
+        menu.addItem(menuItem(L10n.text("插件管理…"), icon: "puzzlepiece.extension", action: #selector(managePlugins)))
         menu.addItem(resourceMenuItem())
         menu.addItem(.separator())
-        menu.addItem(menuItem("检查更新…", icon: "arrow.down.circle", action: #selector(checkForUpdates)))
-        menu.addItem(menuItem("退出 Sticker", icon: "power", action: #selector(NSApplication.terminate(_:)),
+        menu.addItem(languageMenuItem())
+        menu.addItem(menuItem(L10n.text("检查更新…"), icon: "arrow.down.circle", action: #selector(checkForUpdates)))
+        menu.addItem(menuItem(L10n.text("退出 Sticker"), icon: "power", action: #selector(NSApplication.terminate(_:)),
                               key: "q", target: NSApp))
         return menu
+    }
+
+    private func languageMenuItem() -> NSMenuItem {
+        let item = menuItem(L10n.text("语言"), icon: "globe")
+        let submenu = NSMenu()
+        for choice in L10n.Choice.allCases {
+            let option = NSMenuItem(title: choice.title, action: #selector(selectLanguage(_:)), keyEquivalent: "")
+            option.target = self
+            option.representedObject = choice.rawValue
+            option.state = choice == L10n.shared.choice ? .on : .off
+            submenu.addItem(option)
+        }
+        item.submenu = submenu
+        return item
+    }
+
+    @objc private func selectLanguage(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? String,
+              let choice = L10n.Choice(rawValue: value) else { return }
+        L10n.shared.select(choice)
+        libraryWindow?.title = L10n.text("贴纸管理")
+        pluginWindow?.title = L10n.text("插件管理")
+        refreshMenu()
     }
 
     private func menuItem(_ title: String, icon: String, action: Selector? = nil,
@@ -79,7 +112,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         if let toggle = menu.items.first(where: { $0.action == #selector(toggleStickers) }) {
-            toggle.title = overlay.isVisible ? "隐藏贴纸" : "显示贴纸"
+            toggle.title = overlay.isVisible ? L10n.text("隐藏贴纸") : L10n.text("显示贴纸")
         }
     }
 
@@ -93,9 +126,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func checkForUpdates(_ sender: NSMenuItem) {
         guard !UpdateChecker.shared.isChecking else { return }
-        sender.title = "正在检查更新…"
+        sender.title = L10n.text("正在检查更新…")
         UpdateChecker.shared.check {
-            sender.title = "检查更新…"
+            sender.title = L10n.text("检查更新…")
         }
     }
 
@@ -106,7 +139,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
                 backing: .buffered, defer: false
             )
-            window.title = "插件管理"
+            window.title = L10n.text("插件管理")
             window.isReleasedWhenClosed = false
             window.contentMinSize = NSSize(width: 530, height: 320)
             window.contentView = NSHostingView(rootView: StickerPluginManagerView())
@@ -117,7 +150,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pluginWindow?.makeKeyAndOrderFront(nil)
     }
 
-    @objc private func showStickerLibrary() {
+    @objc func showStickerLibrary() {
         if libraryWindow == nil {
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 680, height: 480),
@@ -125,7 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "贴纸管理"
+            window.title = L10n.text("贴纸管理")
             window.isReleasedWhenClosed = false
             window.contentMinSize = NSSize(width: 540, height: 360)
             window.contentView = NSHostingView(rootView: StickerLibraryView(store: store))
@@ -137,32 +170,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func resourceMenuItem() -> NSMenuItem {
-        let item = menuItem("资源文件", icon: "folder")
+        let item = menuItem(L10n.text("资源文件"), icon: "folder")
         let submenu = NSMenu()
 
         let useDefault = NSMenuItem(
-            title: "使用默认位置",
+            title: L10n.text("使用默认位置"),
             action: #selector(useDefaultLocation),
             keyEquivalent: ""
         )
         useDefault.state = isUsingDefault() ? .on : .off
 
         let chooseOther = NSMenuItem(
-            title: "选择其他文件夹…",
+            title: L10n.text("选择其他文件夹…"),
             action: #selector(chooseCustomLocation),
             keyEquivalent: ""
         )
 
         let current = NSMenuItem(
-            title: "当前：\(location.rootURL.lastPathComponent)",
+            title: L10n.format("当前：%@", location.rootURL.lastPathComponent),
             action: nil,
             keyEquivalent: ""
         )
         current.isEnabled = false
         current.toolTip = location.rootURL.path
 
-        submenu.addItem(menuItem("在访达中打开", icon: "folder", action: #selector(openResourceFolder)))
-        submenu.addItem(menuItem("重新读取贴纸", icon: "arrow.clockwise", action: #selector(reloadStickers), key: "r"))
+        submenu.addItem(menuItem(L10n.text("在访达中打开"), icon: "folder", action: #selector(openResourceFolder)))
+        submenu.addItem(menuItem(L10n.text("重新读取贴纸"), icon: "arrow.clockwise", action: #selector(reloadStickers), key: "r"))
         submenu.addItem(.separator())
         submenu.addItem(useDefault)
         submenu.addItem(chooseOther)
@@ -190,7 +223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "选择资源文件夹"
+        panel.prompt = L10n.text("选择资源文件夹")
 
         if panel.runModal() == .OK, let url = panel.url {
             location.useCustom(url: url)
@@ -217,14 +250,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
     private func showAccessibilityAlert() {
         let alert = NSAlert()
-        alert.messageText = "需要辅助功能权限"
+        alert.messageText = L10n.text("需要辅助功能权限")
         alert.informativeText = """
     Sticker 需要辅助功能权限才能监听快捷键和显示贴纸。
     请在系统设置中开启后，重新启动应用。
     """
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "打开系统设置")
-        alert.addButton(withTitle: "退出")
+        alert.addButton(withTitle: L10n.text("打开系统设置"))
+        alert.addButton(withTitle: L10n.text("退出"))
 
         let result = alert.runModal()
 

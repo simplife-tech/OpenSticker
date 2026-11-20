@@ -8,16 +8,20 @@
 
 import Cocoa
 import SwiftUI
+import WebKit
 
 final class OverlayWindowController {
     private var window: NSWindow?
     private let store: StickerStore
     private let contextController: ContextController
+    var onGroupShortcutAvailability: ((Bool) -> Void)?
+    private let onManageGroups: () -> Void
 
     
-    init(store: StickerStore, contextController: ContextController) {
+    init(store: StickerStore, contextController: ContextController, onManageGroups: @escaping () -> Void) {
         self.store = store
         self.contextController = contextController
+        self.onManageGroups = onManageGroups
     }
 
     private var presentationID: UUID?
@@ -40,10 +44,12 @@ final class OverlayWindowController {
     func show(on screen: NSScreen) {
         if presentationID == nil { presentationID = UUID() }
         mouseTimer?.invalidate()
+        let topInset = max(screen.safeAreaInsets.top, screen.frame.maxY - screen.visibleFrame.maxY)
         if window == nil {
             let contentView = OverlayRootView(
                 store: store,
                 contextController: contextController,
+                topInset: topInset,
                 onFramesChanged: { [weak self] frames in
                     self?.cardFrames = frames
                     self?.updateMouseInteraction()
@@ -57,7 +63,12 @@ final class OverlayWindowController {
                     self?.isDragging = dragging
                     self?.updateMouseInteraction()
                 },
-                onEdit: { [weak self] in self?.window?.makeKey() }
+                onEdit: { [weak self] in self?.window?.makeKey() },
+                onManageGroups: { [weak self] in
+                    guard let self else { return }
+                    self.hide()
+                    self.onManageGroups()
+                }
             )
 
             let hosting = NSHostingView(rootView: contentView)
@@ -82,6 +93,10 @@ final class OverlayWindowController {
             window = panel
         }
 
+        if let hosting = window?.contentView as? NSHostingView<OverlayRootView>,
+           hosting.rootView.topInset != topInset {
+            hosting.rootView.topInset = topInset
+        }
         window?.setFrame(screen.frame, display: false)
         window?.orderFrontRegardless()
         let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
@@ -93,6 +108,7 @@ final class OverlayWindowController {
     }
 
     func hide() {
+        onGroupShortcutAvailability?(false)
         presentationID = nil
         mouseTimer?.invalidate()
         mouseTimer = nil
@@ -103,8 +119,24 @@ final class OverlayWindowController {
         isDragging = false
     }
 
+    private func allowsGroupShortcuts(in window: NSWindow) -> Bool {
+        guard window.isVisible, !store.groups.isEmpty, !isDragging,
+              !resizeRegions.contains(where: \.isResizing) else { return false }
+        if let keyWindow = NSApp.keyWindow, keyWindow !== window { return false }
+        if window.isKeyWindow {
+            if window.firstResponder is NSTextView { return false }
+            var view = window.firstResponder as? NSView
+            while let current = view {
+                if current is WKWebView { return false }
+                view = current.superview
+            }
+        }
+        return true
+    }
+
     private func updateMouseInteraction() {
         guard let window else { return }
+        onGroupShortcutAvailability?(allowsGroupShortcuts(in: window))
         let mouse = NSEvent.mouseLocation
         let point = CGPoint(x: mouse.x - window.frame.minX, y: window.frame.maxY - mouse.y)
         let isOverCard = cardFrames.contains { $0.contains(point) }

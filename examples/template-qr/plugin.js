@@ -2300,7 +2300,26 @@ var qrcode = function() {
   "use strict";
   const app = document.querySelector("#app");
   const api = window.Sticker;
-  const heading = "快速二维码";
+  const isChinese = (api.locale ?? "zh-Hans").startsWith("zh");
+  const english = Object.freeze({
+  "快速二维码": "Quick QR",
+  "完成": "Done",
+  "设置": "Settings",
+  "显示名称": "Display name",
+  "编号": "ID",
+  "初始值": "Initial value",
+  "贴纸标题": "Sticker title",
+  "地址模板": "URL template",
+  "模板中的 {参数} 会生成输入框。添加或删除占位符即可调整参数。": "Each {parameter} in the template gets its own input. Add or remove placeholders to change the list.",
+  "在设置中填写地址模板": "Enter a URL template in Settings.",
+  "填完参数后生成二维码": "Fill in all parameters to generate a QR code.",
+  "二维码": "QR code",
+  "复制链接": "Copy link",
+  "已复制链接": "Link copied",
+  "无法生成二维码，请检查内容长度": "Could not generate a QR code. Check the content length."
+});
+  const t = text => isChinese ? text : english[text] ?? text;
+  const heading = t("快速二维码");
   const token = /\{([^{}\s]+)\}/gu;
   let settings = api.mode === "create";
 
@@ -2338,7 +2357,7 @@ var qrcode = function() {
   }
 
   function parameterField(name, label, onChange) {
-    return field(label, keyFor("value", name), "输入" + label, () => {
+    return field(label, keyFor("value", name), isChinese ? "输入" + label : "Enter " + label, () => {
       api.set("set:" + name, "1");
       onChange?.();
     }, valueOf(name));
@@ -2348,7 +2367,7 @@ var qrcode = function() {
     app.replaceChildren();
     if (api.mode === "card") {
       const header = element("header");
-      const toggle = element("button", settings ? "完成" : "设置", "control");
+      const toggle = element("button", settings ? t("完成") : t("设置"), "control");
       toggle.addEventListener("click", () => { settings = !settings; render(); });
       header.append(element("h2", api.get("title").trim() || heading), toggle);
       app.append(header);
@@ -2362,16 +2381,16 @@ var qrcode = function() {
           const group = element("div", "", "parameter");
           group.append(
             element("code", "{" + name + "}"),
-            field("显示名称", keyFor("label", name), name === "id" ? "编号" : name),
-            parameterField(name, "初始值")
+            field(t("显示名称"), keyFor("label", name), name === "id" ? t("编号") : name),
+            parameterField(name, t("初始值"))
           );
           list.append(group);
         }
       }
       app.append(
-        field("贴纸标题", "title", heading),
-        field("地址模板", "template", "https://a.com/{project}/{id}", refreshFields),
-        element("small", "模板中的 {参数} 会生成输入框。添加或删除占位符即可调整参数。"),
+        field(t("贴纸标题"), "title", heading),
+        field(t("地址模板"), "template", "https://a.com/{project}/{id}", refreshFields),
+        element("small", t("模板中的 {参数} 会生成输入框。添加或删除占位符即可调整参数。")),
         list
       );
       refreshFields();
@@ -2384,11 +2403,11 @@ var qrcode = function() {
       result.replaceChildren();
       const template = api.get("template").trim();
       if (!template) {
-        result.append(element("small", "在设置中填写地址模板"));
+        result.append(element("small", t("在设置中填写地址模板")));
         return;
       }
       if (names.some(name => !valueOf(name).trim())) {
-        result.append(element("small", "填完参数后生成二维码"));
+        result.append(element("small", t("填完参数后生成二维码")));
         return;
       }
       try {
@@ -2398,27 +2417,27 @@ var qrcode = function() {
         code.addData(link);
         code.make();
         const image = element("img");
-        image.alt = "二维码";
+        image.alt = t("二维码");
         image.src = code.createDataURL(4);
         const tile = element("div", "", "qr-tile");
         tile.append(image);
         const button = element("button", link, "copy");
-        button.title = "复制链接";
+        button.title = t("复制链接");
         let timer;
         button.addEventListener("click", () => {
           api.copy(link);
-          button.textContent = "已复制链接";
+          button.textContent = t("已复制链接");
           clearTimeout(timer);
           timer = setTimeout(() => { button.textContent = link; }, 1000);
         });
         result.append(tile, button);
       } catch {
-        result.append(element("small", "无法生成二维码，请检查内容长度"));
+        result.append(element("small", t("无法生成二维码，请检查内容长度")));
       }
     }
 
     for (const name of names) {
-      const label = api.get(keyFor("label", name)).trim() || (name === "id" ? "编号" : name);
+      const label = api.get(keyFor("label", name)).trim() || (name === "id" ? t("编号") : name);
       app.append(parameterField(name, label, updateQR));
     }
     app.append(result);

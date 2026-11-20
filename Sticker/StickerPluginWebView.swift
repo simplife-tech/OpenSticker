@@ -4,6 +4,7 @@ import WebKit
 struct StickerPluginWebView: NSViewRepresentable {
     enum Mode: String { case create, card }
 
+    @ObservedObject private var localization = L10n.shared
     let plugin: StickerPlugin
     let mode: Mode
     @Binding var values: [String: String]
@@ -34,7 +35,7 @@ struct StickerPluginWebView: NSViewRepresentable {
         let needsReload = coordinator.parent.plugin != plugin || coordinator.parent.mode != mode
         coordinator.parent = self
         (webView as? PluginWebView)?.onFocus = onFocus
-        if needsReload { coordinator.load(in: webView) }
+        if needsReload || coordinator.loadedLanguage != L10n.language { coordinator.load(in: webView) }
     }
 
     static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
@@ -47,14 +48,34 @@ struct StickerPluginWebView: NSViewRepresentable {
         var parent: StickerPluginWebView
         private var awaitingInitialNavigation = false
         private var documentID = ""
+        private(set) var loadedLanguage = ""
         private var isDragging = false
+        private var lastHistorySnapshot: ClipboardHistory.Snapshot?
 
         init(parent: StickerPluginWebView) { self.parent = parent }
+
+        private var supportsHistory: Bool {
+            parent.mode == .card && parent.plugin.id == ClipboardHistory.pluginID
+        }
+
+        private func sendHistory(to webView: WKWebView?) {
+            let snapshot = ClipboardHistory.shared.snapshot(for: parent.plugin)
+            guard let webView, snapshot != lastHistorySnapshot,
+                  let bytes = try? JSONEncoder().encode(snapshot) else { return }
+            lastHistorySnapshot = snapshot
+            webView.callAsyncJavaScript(
+                "window.dispatchEvent(new CustomEvent('sticker-history', { detail: JSON.parse(payload) }));",
+                arguments: ["payload": String(decoding: bytes, as: UTF8.self)],
+                in: nil, in: .page, completionHandler: nil
+            )
+        }
 
         func load(in webView: WKWebView) {
             finishDrag()
             webView.stopLoading()
             documentID = UUID().uuidString
+            loadedLanguage = L10n.language
+            lastHistorySnapshot = nil
             let data = (try? JSONEncoder().encode(parent.values)) ?? Data("{}".utf8)
             let values = String(decoding: data, as: UTF8.self)
             let bootstrap = """
@@ -98,6 +119,7 @@ struct StickerPluginWebView: NSViewRepresentable {
               }
               window.Sticker = Object.freeze({
                 mode: "\(parent.mode.rawValue)",
+                locale: "\(L10n.language.hasPrefix("zh") ? "zh-Hans" : "en")",
                 get(key) { return values[key] ?? ""; },
                 set(key, value) {
                   if (typeof key !== "string" || typeof value !== "string"
@@ -105,6 +127,16 @@ struct StickerPluginWebView: NSViewRepresentable {
                   values[key] = value;
                   send({document: "\(documentID)", action: "set", key, value});
                 },
+                ...("\(supportsHistory)" === "true" ? {
+                  history: Object.freeze({
+                    refresh() { send({document: "\(documentID)", action: "history", value: "refresh"}); },
+                    perform(action, item = "") {
+                      if (userClick && ["start", "pause", "clear", "copy"].includes(action)) {
+                        send({document: "\(documentID)", action: "history", value: action, item});
+                      }
+                    }
+                  })
+                } : {}),
                 copy(value) {
                   if (userClick && typeof value === "string" && value.length <= 32768) {
                     send({document: "\(documentID)", action: "copy", value});
@@ -136,13 +168,17 @@ struct StickerPluginWebView: NSViewRepresentable {
                   let value = body["value"], value.utf8.count <= 98_304 else { return }
             switch body["action"] {
             case "set":
-                guard let key = body["key"], (1...128).contains(key.utf8.count) else { return }
+                guard !supportsHistory, let key = body["key"], (1...128).contains(key.utf8.count) else { return }
                 var updated = parent.values
                 updated[key] = value
                 guard updated.count <= 128, updated != parent.values else { return }
                 parent.values = updated
             case "copy":
                 copyToClipboard(value)
+            case "history":
+                guard supportsHistory,
+                      StickerPluginRegistry.shared.plugins.contains(parent.plugin) else { return }
+                handleHistory(value, item: body["item"], webView: message.webView)
             case "drag":
                 guard parent.mode == .card, let x = Double(value), let y = body["y"].flatMap(Double.init),
                       x.isFinite, y.isFinite else { return }
@@ -154,6 +190,20 @@ struct StickerPluginWebView: NSViewRepresentable {
             default:
                 break
             }
+        }
+
+        private func handleHistory(_ action: String, item: String?, webView: WKWebView?) {
+            let history = ClipboardHistory.shared
+            switch action {
+            case "start": history.start(for: parent.plugin)
+            case "pause": history.pause(for: parent.plugin)
+            case "clear": history.clear(for: parent.plugin)
+            case "copy":
+                if let item, let id = UUID(uuidString: item) { history.copy(id, for: parent.plugin) }
+            case "refresh": break
+            default: return
+            }
+            sendHistory(to: webView)
         }
 
         private func pointerPosition(in webView: WKWebView?) -> CGPoint? {

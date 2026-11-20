@@ -10,15 +10,26 @@ struct StickerPlugin: Codable, Equatable, Identifiable {
         let author: String?
         let version: String?
         let previousIDs: [String]?
+        let localizations: [String: Translation]?
+
+        struct Translation: Codable, Equatable {
+            let name: String?
+            let description: String?
+            let author: String?
+        }
     }
 
     let manifest: Manifest
     let html: String
     let script: String
     var installedAt: Date? = nil
+    var sourceURL: URL? = nil
 
     var id: String { manifest.id }
-    var name: String { manifest.name }
+    private var translation: Manifest.Translation? { manifest.localizations?[L10n.language] }
+    var name: String { translation?.name ?? manifest.name }
+    var description: String? { translation?.description ?? manifest.description }
+    var author: String? { translation?.author ?? manifest.author }
 }
 
 struct StickerPluginState: Codable, Equatable {
@@ -58,7 +69,8 @@ final class StickerPluginRegistry: ObservableObject {
                            scriptData: read("plugin.js", limit: 512_000))
     }
 
-    func install(manifestData: Data, htmlData: Data, scriptData: Data) throws -> String {
+    func install(manifestData: Data, htmlData: Data, scriptData: Data,
+                 sourceURL: URL? = nil, updating previous: StickerPlugin? = nil) throws -> String {
         guard manifestData.count <= 16_384, htmlData.count <= 128_000,
               scriptData.count <= 512_000 else { throw CocoaError(.fileReadTooLarge) }
         guard let html = String(data: htmlData, encoding: .utf8), !html.isEmpty,
@@ -71,11 +83,23 @@ final class StickerPluginRegistry: ObservableObject {
               manifest.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"#, options: .regularExpression) != nil,
               !manifest.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NSError(domain: "StickerPlugin", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "插件清单无效或格式版本不受支持。"])
+                          userInfo: [NSLocalizedDescriptionKey: L10n.text("插件清单无效或格式版本不受支持。")])
         }
-        let replacedIDs = Set([manifest.id] + (manifest.previousIDs ?? []))
+        if let previous {
+            guard plugins.contains(previous),
+                  manifest.id == previous.id || manifest.previousIDs?.contains(previous.id) == true,
+                  !plugins.contains(where: { $0.id != previous.id && $0.id == manifest.id }),
+                  let installed = previous.manifest.version.flatMap(UpdateChecker.versionParts),
+                  let latest = manifest.version.flatMap(UpdateChecker.versionParts),
+                  installed.lexicographicallyPrecedes(latest) else {
+                throw NSError(domain: "StickerPlugin", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: L10n.text("插件已变化或来源不匹配，请重新检查。")])
+            }
+        }
+        let replacedIDs = previous.map { Set([$0.id]) }
+            ?? Set([manifest.id] + (manifest.previousIDs ?? []))
         let installedAt = plugins.first { replacedIDs.contains($0.id) }?.installedAt ?? Date()
-        let plugin = StickerPlugin(manifest: manifest, html: html, script: script, installedAt: installedAt)
+        let plugin = StickerPlugin(manifest: manifest, html: html, script: script, installedAt: installedAt, sourceURL: sourceURL)
         try save((plugins.filter { !replacedIDs.contains($0.id) } + [plugin]).sorted { $0.name < $1.name })
         return plugin.id
     }
@@ -86,6 +110,7 @@ final class StickerPluginRegistry: ObservableObject {
 
     private func save(_ updated: [StickerPlugin]) throws {
         UserDefaults.standard.set(try JSONEncoder().encode(updated), forKey: storageKey)
+        ClipboardHistory.shared.revokeIfChanged(installed: updated)
         plugins = updated
     }
 }

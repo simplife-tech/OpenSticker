@@ -7,5 +7,12 @@
   "version": "1.0.0",
   "previousIDs": [
     "tech.simplife.integration"
-  ]
+  ],
+  "localizations": {
+    "en": {
+      "name": "Quick QR",
+      "description": "Generate QR codes from an address template and editable parameters. Click the generated link to copy it.",
+      "author": "Sticker Example"
+    }
+  }
 }
