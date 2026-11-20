@@ -44,3 +44,7 @@ xcodebuild -project Sticker.xcodeproj -scheme Sticker -configuration Debug build
 ```
 
 Plugins use HTML and JavaScript and run in a WebView. See the [plugin guide](docs/plugins.md) for the folder format, host API, and localization.
+
+## License
+
+Sticker is available under the [MIT License](LICENSE). Quick QR bundles [QR Code Generator for JavaScript](examples/template-qr/LICENSE.qrcode-generator) under its own MIT notice.

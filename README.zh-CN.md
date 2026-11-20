@@ -44,3 +44,7 @@ xcodebuild -project Sticker.xcodeproj -scheme Sticker -configuration Debug build
 ```
 
 插件使用 HTML 和 JavaScript，在 WebView 中运行。插件目录结构、宿主接口和语言配置见[插件开发说明](docs/plugins.md)。
+
+## 许可证
+
+Sticker 采用 [MIT 许可证](LICENSE)。快速二维码插件采用的 [QR Code Generator for JavaScript](examples/template-qr/LICENSE.qrcode-generator) 保留其原有的 MIT 许可和版权声明。
