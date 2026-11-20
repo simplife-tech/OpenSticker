@@ -5,6 +5,8 @@ struct StickerLibraryView: View {
     @ObservedObject var store: StickerStore
     @State private var query = ""
     @State private var editing: Sticker?
+    @State private var stickerToDelete: Sticker?
+    @State private var deletingSticker = false
 
     @State private var groupFilter = "all"
     @State private var editingGroup = false
@@ -50,7 +52,14 @@ struct StickerLibraryView: View {
         } message: {
             Text(L10n.text("组内贴纸会移回「默认」。"))
         }
-        .alert(L10n.text("分组操作失败"), isPresented: Binding(
+        .alert(L10n.text("删除贴纸？"), isPresented: $deletingSticker, presenting: stickerToDelete) { sticker in
+            Button(L10n.text("取消"), role: .cancel) { stickerToDelete = nil }
+            Button(L10n.text("删除"), role: .destructive) {
+                store.remove(sticker.id)
+                stickerToDelete = nil
+            }
+        }
+        .alert(L10n.text("操作失败"), isPresented: Binding(
             get: { groupError != nil }, set: { if !$0 { groupError = nil } }
         )) {
             Button(L10n.text("好"), role: .cancel) {}
@@ -190,6 +199,25 @@ struct StickerLibraryView: View {
                         }
                         .fixedSize()
                         Button(L10n.text("编辑")) { editing = sticker }
+                        Menu {
+                            Button {
+                                performGroupAction { try store.centerSticker(sticker.id) }
+                            } label: {
+                                Label(L10n.text("移到屏幕中央"), systemImage: "arrow.down.right.and.arrow.up.left")
+                            }
+                            Button(role: .destructive) {
+                                stickerToDelete = sticker
+                                deletingSticker = true
+                            } label: {
+                                Label(L10n.text("删除…"), systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .fixedSize()
+                        .accessibilityLabel(L10n.text("更多贴纸操作"))
                     }
                     .padding(.vertical, 7)
                 }

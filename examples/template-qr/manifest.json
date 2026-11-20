@@ -4,7 +4,7 @@
   "name": "快速二维码",
   "description": "自定义标题和地址模板，填写参数后即时生成二维码，也可复制链接。",
   "author": "Sticker 示例",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "previousIDs": [
     "tech.simplife.integration"
   ],

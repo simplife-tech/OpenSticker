@@ -113,6 +113,14 @@ final class StickerStore: ObservableObject {
         groups = updated
     }
 
+    func centerSticker(_ id: UUID) throws {
+        guard let index = stickers.firstIndex(where: { $0.id == id }) else { return }
+        var updated = stickers
+        updated[index].normalizedPosition = CGPoint(x: 0.5, y: 0.5)
+        try JSONEncoder().encode(updated).write(to: fileURL, options: .atomic)
+        stickers = updated
+    }
+
     func moveSticker(_ stickerID: UUID, to groupID: UUID?) throws {
         guard let index = stickers.firstIndex(where: { $0.id == stickerID }) else { return }
         var updated = stickers

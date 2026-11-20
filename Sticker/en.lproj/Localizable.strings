@@ -167,3 +167,6 @@
 "允许记录剪贴板？" = "Allow Clipboard History?";
 "此插件可以读取本次运行期间复制的纯文本，内容可能包含敏感信息。最近 50 条仅保存在内存中。" = "This plugin can read plain text copied during this session, which may include sensitive information. The last 50 entries are kept in memory only.";
 "允许" = "Allow";
+"移到屏幕中央" = "Move to Screen Center";
+"删除贴纸？" = "Delete Sticker?";
+"更多贴纸操作" = "More Sticker Actions";
