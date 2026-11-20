@@ -63,7 +63,7 @@ final class UpdateChecker {
         ]
     }
 
-    private func readToken() -> String? {
+    func readToken() -> String? {
         var query = keychainItem
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -73,7 +73,7 @@ final class UpdateChecker {
         return String(data: data, encoding: .utf8)
     }
 
-    private func saveToken(_ token: String) throws {
+    func saveToken(_ token: String) throws {
         let attributes = [kSecValueData as String: Data(token.utf8)]
         var status = SecItemUpdate(keychainItem as CFDictionary, attributes as CFDictionary)
         if status == errSecItemNotFound {
@@ -86,14 +86,15 @@ final class UpdateChecker {
         }
     }
 
-    @MainActor private func requestToken(replacing: Bool) -> String? {
+    @MainActor func requestToken(replacing: Bool, importing: Bool = false) -> String? {
         let alert = NSAlert()
-        alert.messageText = replacing ? "GitHub 令牌无法读取版本" : "检查私有仓库的版本"
-        alert.informativeText = "请输入对 simplife-tech/Sticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串。"
+        alert.messageText = importing ? "访问私有插件仓库"
+            : replacing ? "GitHub 令牌无法读取版本" : "检查私有仓库的版本"
+        alert.informativeText = "请输入对 simplife-tech/Sticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。"
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 290, height: 24))
         field.placeholderString = "GitHub 令牌"
         alert.accessoryView = field
-        alert.addButton(withTitle: "检查")
+        alert.addButton(withTitle: importing ? "继续导入" : "检查")
         alert.addButton(withTitle: "取消")
         NSApp.activate(ignoringOtherApps: true)
         alert.window.initialFirstResponder = field

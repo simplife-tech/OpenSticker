@@ -21,6 +21,7 @@ final class OverlayWindowController {
     }
 
     private var presentationID: UUID?
+    var isVisible: Bool { presentationID != nil }
     private var mouseTimer: Timer?
     private var cardFrames: [CGRect] = []
     private var isDragging = false

@@ -53,23 +53,26 @@ final class StickerPluginRegistry: ObservableObject {
             return try Data(contentsOf: file)
         }
 
-        func readText(_ name: String, limit: Int) throws -> String {
-            guard let text = String(data: try read(name, limit: limit), encoding: .utf8), !text.isEmpty else {
-                throw CocoaError(.fileReadInapplicableStringEncoding)
-            }
-            return text
+        return try install(manifestData: read("manifest.json", limit: 16_384),
+                           htmlData: read("index.html", limit: 128_000),
+                           scriptData: read("plugin.js", limit: 512_000))
+    }
+
+    func install(manifestData: Data, htmlData: Data, scriptData: Data) throws -> String {
+        guard manifestData.count <= 16_384, htmlData.count <= 128_000,
+              scriptData.count <= 512_000 else { throw CocoaError(.fileReadTooLarge) }
+        guard let html = String(data: htmlData, encoding: .utf8), !html.isEmpty,
+              let script = String(data: scriptData, encoding: .utf8), !script.isEmpty else {
+            throw CocoaError(.fileReadInapplicableStringEncoding)
         }
 
-        let manifest = try JSONDecoder().decode(StickerPlugin.Manifest.self,
-                                                from: read("manifest.json", limit: 16_384))
+        let manifest = try JSONDecoder().decode(StickerPlugin.Manifest.self, from: manifestData)
         guard manifest.formatVersion == 1,
               manifest.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"#, options: .regularExpression) != nil,
               !manifest.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NSError(domain: "StickerPlugin", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "插件清单无效或格式版本不受支持。"])
         }
-        let html = try readText("index.html", limit: 128_000)
-        let script = try readText("plugin.js", limit: 512_000)
         let replacedIDs = Set([manifest.id] + (manifest.previousIDs ?? []))
         let installedAt = plugins.first { replacedIDs.contains($0.id) }?.installedAt ?? Date()
         let plugin = StickerPlugin(manifest: manifest, html: html, script: script, installedAt: installedAt)

@@ -9,7 +9,7 @@ import AppKit
 import Cocoa
 import SwiftUI
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
 
     private var pluginWindow: NSWindow?
@@ -49,27 +49,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
-
-        let library = NSMenuItem(title: "管理贴纸…", action: #selector(showStickerLibrary), keyEquivalent: "")
-        library.target = self
-        menu.addItem(library)
+        menu.delegate = self
+        menu.addItem(menuItem("新建贴纸…", icon: "plus.square", action: #selector(newSticker),
+                              key: "n", modifiers: .option))
+        menu.addItem(menuItem("显示贴纸", icon: "rectangle.on.rectangle", action: #selector(toggleStickers),
+                              key: "\t", modifiers: .option))
+        menu.addItem(menuItem("管理贴纸…", icon: "note.text", action: #selector(showStickerLibrary)))
         menu.addItem(.separator())
+        menu.addItem(menuItem("插件管理…", icon: "puzzlepiece.extension", action: #selector(managePlugins)))
         menu.addItem(resourceMenuItem())
-        let plugins = NSMenuItem(title: "插件管理…", action: #selector(managePlugins), keyEquivalent: "")
-        plugins.target = self
-        menu.addItem(plugins)
         menu.addItem(.separator())
-        menu.addItem(reloadItem())
-        menu.addItem(openFolderItem())
-        menu.addItem(.separator())
-        let updates = NSMenuItem(title: "检查更新…", action: #selector(checkForUpdates), keyEquivalent: "")
-        updates.target = self
-        menu.addItem(updates)
-        menu.addItem(quitItem())
-
+        menu.addItem(menuItem("检查更新…", icon: "arrow.down.circle", action: #selector(checkForUpdates)))
+        menu.addItem(menuItem("退出 Sticker", icon: "power", action: #selector(NSApplication.terminate(_:)),
+                              key: "q", target: NSApp))
         return menu
     }
-    
+
+    private func menuItem(_ title: String, icon: String, action: Selector? = nil,
+                          key: String = "", modifiers: NSEvent.ModifierFlags = .command,
+                          target: AnyObject? = nil) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = target ?? self
+        item.keyEquivalentModifierMask = modifiers
+        let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
+        image?.isTemplate = true
+        item.image = image
+        return item
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        if let toggle = menu.items.first(where: { $0.action == #selector(toggleStickers) }) {
+            toggle.title = overlay.isVisible ? "隐藏贴纸" : "显示贴纸"
+        }
+    }
+
+    @objc private func newSticker() {
+        PanelController.shared.toggle(on: screenAtMouse(), initialText: nil)
+    }
+
+    @objc private func toggleStickers() {
+        overlay.toggle(on: screenAtMouse())
+    }
+
     @objc private func checkForUpdates(_ sender: NSMenuItem) {
         guard !UpdateChecker.shared.isChecking else { return }
         sender.title = "正在检查更新…"
@@ -116,7 +137,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func resourceMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "📂 资源位置", action: nil, keyEquivalent: "")
+        let item = menuItem("资源文件", icon: "folder")
         let submenu = NSMenu()
 
         let useDefault = NSMenuItem(
@@ -133,12 +154,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         let current = NSMenuItem(
-            title: "当前：\(location.rootURL)",
+            title: "当前：\(location.rootURL.lastPathComponent)",
             action: nil,
             keyEquivalent: ""
         )
         current.isEnabled = false
+        current.toolTip = location.rootURL.path
 
+        submenu.addItem(menuItem("在访达中打开", icon: "folder", action: #selector(openResourceFolder)))
+        submenu.addItem(menuItem("重新读取贴纸", icon: "arrow.clockwise", action: #selector(reloadStickers), key: "r"))
+        submenu.addItem(.separator())
         submenu.addItem(useDefault)
         submenu.addItem(chooseOther)
         submenu.addItem(.separator())
@@ -180,30 +205,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openResourceFolder() {
         NSWorkspace.shared.open(location.rootURL)
-    }
-
-    private func reloadItem() -> NSMenuItem {
-        NSMenuItem(
-            title: "重载贴纸",
-            action: #selector(reloadStickers),
-            keyEquivalent: "r"
-        )
-    }
-
-    private func openFolderItem() -> NSMenuItem {
-        NSMenuItem(
-            title: "打开资源文件夹",
-            action: #selector(openResourceFolder),
-            keyEquivalent: ""
-        )
-    }
-
-    private func quitItem() -> NSMenuItem {
-        NSMenuItem(
-            title: "退出",
-            action: #selector(NSApp.terminate(_:)),
-            keyEquivalent: "q"
-        )
     }
 
     private func storeReload() {
