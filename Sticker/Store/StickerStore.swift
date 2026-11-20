@@ -20,16 +20,22 @@ final class StickerStore: ObservableObject {
 
     @Published private(set) var groups: [StickerGroup] = []
     @Published private(set) var activeGroupID: UUID?
+    @Published var draggingDisplayID: String?
     @Published var stickers: [Sticker] = []
     
     let index = StickerIndex()
 
     private let location = StickerResourceLocation.shared
+    private var stickerFile: LoadedFile?
+    private var groupFile: LoadedFile?
+    private var loadedDirectory: URL?
+
+    private struct LoadedFile {
+        let data: Data?
+    }
 
     private init() {
-        stickers = load()
-        loadGroups()
-        rebuildIndex()
+        refreshAll()
     }
     
 
@@ -38,7 +44,18 @@ final class StickerStore: ObservableObject {
     }
     
     func refreshAll() {
-        stickers = load()
+        if loadedDirectory != location.rootURL {
+            loadedDirectory = location.rootURL
+            stickers = []
+            groups = []
+        }
+        stickerFile = nil
+        groupFile = nil
+        do {
+            stickers = try Self.load([Sticker].self, from: fileURL, tracking: &stickerFile)
+        } catch {
+            print("Failed to load stickers:", error)
+        }
         loadGroups()
         rebuildIndex()
     }
@@ -47,7 +64,11 @@ final class StickerStore: ObservableObject {
     private let activeGroupKey = "StickerActiveGroup"
 
     private func loadGroups() {
-        groups = (try? JSONDecoder().decode([StickerGroup].self, from: Data(contentsOf: groupsURL))) ?? []
+        do {
+            groups = try Self.load([StickerGroup].self, from: groupsURL, tracking: &groupFile)
+        } catch {
+            print("Failed to load groups:", error)
+        }
         let saved = UserDefaults.standard.string(forKey: activeGroupKey).flatMap(UUID.init(uuidString:))
         activeGroupID = validGroupID(saved)
     }
@@ -109,7 +130,7 @@ final class StickerStore: ObservableObject {
     }
 
     private func writeGroups(_ updated: [StickerGroup]) throws {
-        try JSONEncoder().encode(updated).write(to: groupsURL, options: .atomic)
+        try Self.write(updated, to: groupsURL, tracking: &groupFile)
         groups = updated
     }
 
@@ -117,7 +138,7 @@ final class StickerStore: ObservableObject {
         guard let index = stickers.firstIndex(where: { $0.id == id }) else { return }
         var updated = stickers
         updated[index].normalizedPosition = CGPoint(x: 0.5, y: 0.5)
-        try JSONEncoder().encode(updated).write(to: fileURL, options: .atomic)
+        try Self.write(updated, to: fileURL, tracking: &stickerFile)
         stickers = updated
     }
 
@@ -125,51 +146,58 @@ final class StickerStore: ObservableObject {
         guard let index = stickers.firstIndex(where: { $0.id == stickerID }) else { return }
         var updated = stickers
         updated[index].groupID = validGroupID(groupID)
-        try JSONEncoder().encode(updated).write(to: fileURL, options: .atomic)
+        try Self.write(updated, to: fileURL, tracking: &stickerFile)
         stickers = updated
     }
 
-    private func load() -> [Sticker] {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            save(defaultStickers())
-            return defaultStickers()
-        }
-
+    private static func readFile(_ url: URL) throws -> Data? {
         do {
-            let data = try Data(contentsOf: fileURL)
-            return try JSONDecoder().decode([Sticker].self, from: data)
-        } catch {
-            print("❌ Failed to load stickers:", error)
-            return defaultStickers()
+            return try Data(contentsOf: url)
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
+            // A cloud placeholder can report "not found" while it is still listed in its folder.
+            let names = try FileManager.default.contentsOfDirectory(atPath: url.deletingLastPathComponent().path)
+            guard !names.contains(url.lastPathComponent) else { throw error }
+            return nil
         }
+    }
+
+    private static func load<Value: Decodable>(_ type: [Value].Type, from url: URL,
+                                         tracking file: inout LoadedFile?) throws -> [Value] {
+        let data = try readFile(url)
+        let decoded = try data.map { try JSONDecoder().decode(type, from: $0) } ?? []
+        file = LoadedFile(data: data)
+        return decoded
+    }
+
+    private static func write<Value: Encodable>(_ value: Value, to url: URL,
+                                         tracking file: inout LoadedFile?) throws {
+        guard let loaded = file, try readFile(url) == loaded.data else {
+            throw NSError(domain: "StickerStore", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey:
+                            L10n.text("数据文件未成功读取或已在其他地方修改，请重新读取贴纸后再保存。")])
+        }
+        let data = try JSONEncoder().encode(value)
+        if data != loaded.data {
+            try data.write(to: url, options: .atomic)
+        }
+        file = LoadedFile(data: data)
     }
 
     func save(_ stickers: [Sticker]) {
         do {
-            let data = try JSONEncoder().encode(stickers)
-            try data.write(to: fileURL, options: [.atomic])
+            try Self.write(stickers, to: fileURL, tracking: &stickerFile)
         } catch {
-            print("❌ Failed to save stickers:", error)
+            print("Failed to save stickers:", error)
         }
     }
 
-    private func defaultStickers() -> [Sticker] {
-        [
-            Sticker(
-                id: UUID(),
-                content: .text(L10n.text("灵感\n桌面贴纸 = 按住即现")),
-                scopes: [.global],
-                normalizedPosition: CGPoint(x: 0.55, y: 0.22),
-            )
-        ]
-    }
-    
-    func add(_ sticker: Sticker) {
-        stickers.append(sticker)
+    func add(_ sticker: Sticker) throws {
+        let updated = stickers + [sticker]
+        try Self.write(updated, to: fileURL, tracking: &stickerFile)
+        stickers = updated
         index.index(sticker)
-        save(stickers)
     }
-    
+
     func edit(_ id: UUID, content: StickerContent, scopes: Set<StickerScope>) throws {
         guard let index = stickers.firstIndex(where: { $0.id == id }) else {
             throw CocoaError(.validationMissingMandatoryProperty)
@@ -177,8 +205,7 @@ final class StickerStore: ObservableObject {
         var updated = stickers
         updated[index].content = content
         updated[index].scopes = scopes
-        let data = try JSONEncoder().encode(updated)
-        try data.write(to: fileURL, options: .atomic)
+        try Self.write(updated, to: fileURL, tracking: &stickerFile)
         stickers = updated
         rebuildIndex()
     }
@@ -188,7 +215,7 @@ final class StickerStore: ObservableObject {
         let remaining = stickers.filter { $0.id != id }
 
         do {
-            try JSONEncoder().encode(remaining).write(to: fileURL, options: .atomic)
+            try Self.write(remaining, to: fileURL, tracking: &stickerFile)
         } catch {
             NSApp.presentError(error)
             return

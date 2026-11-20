@@ -1,104 +1,49 @@
-//
-//  OverlayWindowController.swift
-//  Sticker
-//
-//  Created by zhouyifeng on 2025/12/19.
-//
-
-
 import Cocoa
 import SwiftUI
 import WebKit
 
 final class OverlayWindowController {
-    private var window: NSWindow?
+    private final class Surface {
+        let panel: OverlayPanel
+        var cardFrames: [CGRect] = []
+        var resizeRegions: [StickerResizeRegion] = []
+        var isDragging = false
+
+        init(panel: OverlayPanel) { self.panel = panel }
+
+        var isResizing: Bool { resizeRegions.contains(where: \.isResizing) }
+    }
+
     private let store: StickerStore
     private let contextController: ContextController
-    var onGroupShortcutAvailability: ((Bool) -> Void)?
     private let onManageGroups: () -> Void
+    private var surfaces: [Surface] = []
+    private var mouseTimer: Timer?
+    var onGroupShortcutAvailability: ((Bool) -> Void)?
 
-    
+    var isVisible: Bool { !surfaces.isEmpty }
+
     init(store: StickerStore, contextController: ContextController, onManageGroups: @escaping () -> Void) {
         self.store = store
         self.contextController = contextController
         self.onManageGroups = onManageGroups
     }
 
-    private var presentationID: UUID?
-    var isVisible: Bool { presentationID != nil }
-    private var mouseTimer: Timer?
-    private var cardFrames: [CGRect] = []
-    private var isDragging = false
-    private var resizeRegions: [StickerResizeRegion] = []
-
     func toggle(on screen: NSScreen) {
-        if presentationID != nil {
-            hide()
-            return
-        }
-
-        presentationID = UUID()
-        show(on: screen)
+        if isVisible { hide() }
+        else { show(on: screen) }
     }
 
     func show(on screen: NSScreen) {
-        if presentationID == nil { presentationID = UUID() }
-        mouseTimer?.invalidate()
-        let topInset = max(screen.safeAreaInsets.top, screen.frame.maxY - screen.visibleFrame.maxY)
-        if window == nil {
-            let contentView = OverlayRootView(
-                store: store,
-                contextController: contextController,
-                topInset: topInset,
-                onFramesChanged: { [weak self] frames in
-                    self?.cardFrames = frames
-                    self?.updateMouseInteraction()
-                },
-                onResizeRegionsChanged: { [weak self] regions in
-                    guard let self else { return }
-                    self.resizeRegions = regions
-                    self.updateMouseInteraction()
-                },
-                onDraggingChanged: { [weak self] dragging in
-                    self?.isDragging = dragging
-                    self?.updateMouseInteraction()
-                },
-                onEdit: { [weak self] in self?.window?.makeKey() },
-                onManageGroups: { [weak self] in
-                    guard let self else { return }
-                    self.hide()
-                    self.onManageGroups()
-                }
-            )
+        if isVisible { hide() }
+        let displays = NSScreen.screens.map(StickerDisplay.init)
+        let preferred = displays.first { $0.id == screen.stickerDisplayID } ?? displays.first
+        guard let preferred else { return }
 
-            let hosting = NSHostingView(rootView: contentView)
-
-            let panel = OverlayPanel(
-                contentRect: screen.frame,
-                styleMask: [.borderless, .nonactivatingPanel],
-                backing: .buffered,
-                defer: false
-            )
-
-            panel.isReleasedWhenClosed = false
-            panel.contentView = hosting
-            panel.isOpaque = false
-            panel.backgroundColor = .clear
-            panel.level = .floating
-            panel.becomesKeyOnlyIfNeeded = true
-            panel.ignoresMouseEvents = true
-            panel.collectionBehavior = [.fullScreenAuxiliary]
-            panel.hidesOnDeactivate = false
-
-            window = panel
+        surfaces = displays.map { makeSurface(for: $0, displays: displays, preferredID: preferred.id) }
+        for surface in surfaces {
+            surface.panel.orderFrontRegardless()
         }
-
-        if let hosting = window?.contentView as? NSHostingView<OverlayRootView>,
-           hosting.rootView.topInset != topInset {
-            hosting.rootView.topInset = topInset
-        }
-        window?.setFrame(screen.frame, display: false)
-        window?.orderFrontRegardless()
         let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
             self?.updateMouseInteraction()
         }
@@ -107,43 +52,87 @@ final class OverlayWindowController {
         updateMouseInteraction()
     }
 
-    func hide() {
-        onGroupShortcutAvailability?(false)
-        presentationID = nil
-        mouseTimer?.invalidate()
-        mouseTimer = nil
-        window?.close()
-        window = nil
-        cardFrames = []
-        resizeRegions = []
-        isDragging = false
+    private func makeSurface(for display: StickerDisplay, displays: [StickerDisplay],
+                             preferredID: String) -> Surface {
+        let panel = OverlayPanel(contentRect: display.frame,
+                                 styleMask: [.borderless, .nonactivatingPanel],
+                                 backing: .buffered, defer: false)
+        let surface = Surface(panel: panel)
+        let root = OverlayRootView(
+            store: store,
+            contextController: contextController,
+            display: display,
+            displays: displays,
+            preferredDisplayID: preferredID,
+            onFramesChanged: { [weak self, weak surface] frames in
+                surface?.cardFrames = frames
+                self?.updateMouseInteraction()
+            },
+            onResizeRegionsChanged: { [weak self, weak surface] regions in
+                surface?.resizeRegions = regions
+                self?.updateMouseInteraction()
+            },
+            onDraggingChanged: { [weak self, weak surface] dragging in
+                surface?.isDragging = dragging
+                self?.updateMouseInteraction()
+            },
+            onEdit: { [weak panel] in panel?.makeKey() },
+            onManageGroups: { [weak self] in
+                guard let self else { return }
+                self.hide()
+                self.onManageGroups()
+            }
+        )
+        panel.isReleasedWhenClosed = false
+        panel.contentView = NSHostingView(rootView: root)
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.level = .floating
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.ignoresMouseEvents = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.hidesOnDeactivate = false
+        panel.setFrame(display.frame, display: false)
+        return surface
     }
 
-    private func allowsGroupShortcuts(in window: NSWindow) -> Bool {
-        guard window.isVisible, !store.groups.isEmpty, !isDragging,
-              !resizeRegions.contains(where: \.isResizing) else { return false }
-        if let keyWindow = NSApp.keyWindow, keyWindow !== window { return false }
-        if window.isKeyWindow {
-            if window.firstResponder is NSTextView { return false }
-            var view = window.firstResponder as? NSView
-            while let current = view {
-                if current is WKWebView { return false }
-                view = current.superview
-            }
+    func hide() {
+        onGroupShortcutAvailability?(false)
+        mouseTimer?.invalidate()
+        mouseTimer = nil
+        let closing = surfaces
+        surfaces = []
+        if closing.contains(where: { $0.isDragging }) { store.save(store.stickers) }
+        store.draggingDisplayID = nil
+        for surface in closing { surface.panel.close() }
+    }
+
+    private func allowsGroupShortcuts(gestureInProgress: Bool) -> Bool {
+        guard isVisible, !store.groups.isEmpty, !gestureInProgress else { return false }
+        guard let keyWindow = NSApp.keyWindow else { return true }
+        guard surfaces.contains(where: { $0.panel === keyWindow }),
+              !(keyWindow.firstResponder is NSTextView) else { return false }
+        var view = keyWindow.firstResponder as? NSView
+        while let current = view {
+            if current is WKWebView { return false }
+            view = current.superview
         }
         return true
     }
 
     private func updateMouseInteraction() {
-        guard let window else { return }
-        onGroupShortcutAvailability?(allowsGroupShortcuts(in: window))
+        guard isVisible else { return }
+        let activeSurface = surfaces.first { $0.isDragging || $0.isResizing }
+        onGroupShortcutAvailability?(allowsGroupShortcuts(gestureInProgress: activeSurface != nil))
         let mouse = NSEvent.mouseLocation
-        let point = CGPoint(x: mouse.x - window.frame.minX, y: window.frame.maxY - mouse.y)
-        let isOverCard = cardFrames.contains { $0.contains(point) }
-        let isResizing = resizeRegions.contains { $0.isResizing }
-        let ignoresMouse = !isDragging && !isResizing && !isOverCard
-        if window.ignoresMouseEvents != ignoresMouse {
-            window.ignoresMouseEvents = ignoresMouse
+        for surface in surfaces {
+            let panel = surface.panel
+            let point = CGPoint(x: mouse.x - panel.frame.minX, y: panel.frame.maxY - mouse.y)
+            let capturesMouse = activeSurface.map { $0 === surface }
+                ?? (panel.frame.contains(mouse) && surface.cardFrames.contains { $0.contains(point) })
+            if panel.ignoresMouseEvents == capturesMouse {
+                panel.ignoresMouseEvents = !capturesMouse
+            }
         }
     }
 }

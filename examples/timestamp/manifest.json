@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "id": "tech.simplife.timestamp",
+  "name": "时间戳转换",
+  "description": "在可读时间、秒级和毫秒级 Unix 时间戳之间转换。",
+  "author": "Sticker 示例",
+  "version": "0.1.0",
+  "localizations": {
+    "en": {
+      "name": "Timestamp Converter",
+      "description": "Convert between readable dates and Unix timestamps in seconds or milliseconds.",
+      "author": "Sticker Example"
+    }
+  }
+}

@@ -26,6 +26,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
+        PanelController.shared.onStickerCreated = { [weak self] screen in
+            self?.overlay.show(on: screen)
+        }
         
         hotKey.onToggleOverlay = {
             self.overlay.toggle(on: screenAtMouse())
@@ -50,6 +53,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.setActivationPolicy(.accessory)
     }
     
+    func applicationDidChangeScreenParameters(_ notification: Notification) {
+        if overlay.isVisible, !NSScreen.screens.isEmpty {
+            overlay.show(on: screenAtMouse())
+        }
+    }
+
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(named: "StatusIcon")

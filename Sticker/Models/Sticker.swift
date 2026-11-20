@@ -54,6 +54,7 @@ struct Sticker: Identifiable, Equatable, Codable {
     let id: UUID
     var content: StickerContent
     var scopes: Set<StickerScope>
+    var displayID: String?
     var groupID: UUID?
     var plugin: StickerPluginState?
     var isCollapsed: Bool?

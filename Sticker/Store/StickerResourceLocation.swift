@@ -61,10 +61,6 @@ final class StickerResourceLocation {
         if !fm.fileExists(atPath: imagesDir.path) {
             try? fm.createDirectory(at: imagesDir, withIntermediateDirectories: true)
         }
-
-        if !fm.fileExists(atPath: stickersJSON.path) {
-            try? "[]".write(to: stickersJSON, atomically: true, encoding: .utf8)
-        }
     }
 
     // MARK: - Default Location

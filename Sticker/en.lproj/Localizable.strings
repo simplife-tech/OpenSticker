@@ -170,3 +170,4 @@
 "移到屏幕中央" = "Move to Screen Center";
 "删除贴纸？" = "Delete Sticker?";
 "更多贴纸操作" = "More Sticker Actions";
+"数据文件未成功读取或已在其他地方修改，请重新读取贴纸后再保存。" = "Sticker data could not be read or changed elsewhere. Reload your stickers before saving.";

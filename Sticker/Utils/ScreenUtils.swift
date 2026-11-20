@@ -45,3 +45,38 @@ func getMousePosition() -> CGPoint {
     
     return position
 }
+
+extension NSScreen {
+    var stickerDisplayID: String {
+        guard let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
+            return localizedName
+        }
+        let id = CGDirectDisplayID(number.uint32Value)
+        if let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() {
+            return CFUUIDCreateString(nil, uuid) as String
+        }
+        return String(id)
+    }
+}
+
+struct StickerDisplay {
+    let id: String
+    let frame: CGRect
+    let topInset: CGFloat
+
+    init(_ screen: NSScreen) {
+        id = screen.stickerDisplayID
+        frame = screen.frame
+        topInset = max(screen.safeAreaInsets.top, screen.frame.maxY - screen.visibleFrame.maxY)
+    }
+
+    func desktopPoint(for position: CGPoint) -> CGPoint {
+        CGPoint(x: frame.minX + position.x * frame.width,
+                y: frame.maxY - position.y * frame.height)
+    }
+
+    func normalizedPosition(for point: CGPoint) -> CGPoint {
+        CGPoint(x: min(max((point.x - frame.minX) / frame.width, 0), 1),
+                y: min(max((frame.maxY - point.y) / frame.height, 0), 1))
+    }
+}

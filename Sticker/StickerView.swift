@@ -11,6 +11,8 @@ struct StickerView: View {
 
     let deleteTarget: CGRect
     let screenSize: CGSize
+    let display: StickerDisplay
+    let displays: [StickerDisplay]
     var onDelete: (UUID) -> Void
     var onEdit: () -> Void
     var onSaveText: (String) throws -> Void
@@ -89,9 +91,16 @@ struct StickerView: View {
                 )
             }
         }
-        .position(x: sticker.normalizedPosition.x * screenSize.width,
-                  y: sticker.normalizedPosition.y * screenSize.height)
+        .position(x: displayedPosition.x * screenSize.width,
+                  y: displayedPosition.y * screenSize.height)
+        .opacity(isDragging && sticker.displayID != display.id ? 0 : 1)
         .zIndex(draggingID == sticker.id ? 1 : 0)
+    }
+
+    // Keep the view that owns the gesture mounted until the mouse is released.
+    private var displayedPosition: CGPoint {
+        if isDragging, sticker.displayID != display.id, let dragOrigin { return dragOrigin }
+        return sticker.normalizedPosition
     }
 
     private var expandedCard: some View {
@@ -238,7 +247,7 @@ struct StickerView: View {
                     get: { sticker.plugin?.values ?? [:] },
                     set: { sticker.plugin?.values = $0; persistSize() }
                 ), onFocus: onEdit, onDrag: { translation, point in
-                    moveSticker(translation)
+                    moveSticker(translation, pointer: point)
                     isOverDeleteBar = deleteTarget.contains(point)
                 }, onDragEnded: { point in
                     finishMove(shouldDelete: point.map { deleteTarget.contains($0) } ?? false)
@@ -392,7 +401,7 @@ struct StickerView: View {
     private var moveGesture: some Gesture {
         DragGesture(minimumDistance: 3, coordinateSpace: .named("stickerOverlay"))
             .onChanged { value in
-                moveSticker(value.translation)
+                moveSticker(value.translation, pointer: value.location)
                 isOverDeleteBar = deleteTarget.contains(value.location)
             }
             .onEnded { value in
@@ -400,17 +409,23 @@ struct StickerView: View {
             }
     }
 
-    private func moveSticker(_ translation: CGSize) {
+    private func moveSticker(_ translation: CGSize, pointer: CGPoint) {
         guard screenSize.width > 0, screenSize.height > 0 else { return }
         if dragOrigin == nil {
             dragOrigin = sticker.normalizedPosition
             draggingID = sticker.id
         }
         guard let origin = dragOrigin else { return }
-        sticker.normalizedPosition = CGPoint(
-            x: min(max(origin.x + translation.width / screenSize.width, 0), 1),
-            y: min(max(origin.y + translation.height / screenSize.height, 0), 1)
-        )
+        let start = display.desktopPoint(for: origin)
+        let desktopPointer = CGPoint(x: display.frame.minX + pointer.x, y: display.frame.maxY - pointer.y)
+        let destination = displays.first { $0.frame.contains(desktopPointer) }
+            ?? displays.first { $0.id == sticker.displayID }
+            ?? display
+        let center = CGPoint(x: start.x + translation.width, y: start.y - translation.height)
+        var moved = sticker
+        moved.displayID = destination.id
+        moved.normalizedPosition = destination.normalizedPosition(for: center)
+        sticker = moved
     }
 
     private func finishMove(shouldDelete: Bool) {

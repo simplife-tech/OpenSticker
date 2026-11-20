@@ -7,6 +7,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private var panel: NSPanel?
     private(set) var isVisible = false
     private var creationScreen: NSScreen?
+    var onStickerCreated: ((NSScreen) -> Void)?
 
     func toggle(on screen: NSScreen, initialText: String?) {
         if isVisible { hide() }
@@ -56,19 +57,25 @@ final class PanelController: NSObject, NSWindowDelegate {
         let state = plugin.map { StickerPluginState(pluginID: $0.id, values: viewModel.pluginValues) }
         let store = StickerStore.shared
         let sticker = Sticker(id: UUID(), content: .text(plugin?.name ?? viewModel.text), scopes: [.global],
+                              displayID: creationScreen?.stickerDisplayID,
                               groupID: store.validGroupID(viewModel.groupID),
                               plugin: state,
                               paperColor: viewModel.color,
                               textSize: plugin == nil ? nil : CGSize(width: 280, height: 350),
                               normalizedPosition: CGPoint(x: 0.5, y: 0.5))
-        store.add(sticker)
+        do {
+            try store.add(sticker)
+        } catch {
+            NSApp.presentError(error)
+            return
+        }
         store.selectGroup(sticker.groupID)
         viewModel.text = ""
         viewModel.pluginID = ""
         viewModel.pluginValues = [:]
         hide()
         if let screen = creationScreen {
-            (NSApp.delegate as? AppDelegate)?.overlay.show(on: screen)
+            onStickerCreated?(screen)
         }
     }
 

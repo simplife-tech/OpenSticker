@@ -13,7 +13,15 @@ struct OverlayRootView: View {
     @ObservedObject var store: StickerStore
     @ObservedObject var contextController: ContextController
 
-    var topInset: CGFloat
+    let display: StickerDisplay
+    let displays: [StickerDisplay]
+    let preferredDisplayID: String
+
+    private func belongsHere(_ sticker: Sticker) -> Bool {
+        let id = sticker.displayID
+        if let id, displays.contains(where: { $0.id == id }) { return id == display.id }
+        return preferredDisplayID == display.id
+    }
     let onFramesChanged: ([CGRect]) -> Void
     let onResizeRegionsChanged: ([StickerResizeRegion]) -> Void
     let onDraggingChanged: (Bool) -> Void
@@ -35,7 +43,7 @@ struct OverlayRootView: View {
     var body: some View {
         GeometryReader { geo in
             let targetWidth = min(300, max(0, geo.size.width - 32))
-            let target = CGRect(x: (geo.size.width - targetWidth) / 2, y: topInset + 14,
+            let target = CGRect(x: (geo.size.width - targetWidth) / 2, y: display.topInset + 14,
                                 width: targetWidth, height: 48)
             ZStack(alignment: .top) {
                 if draggingID != nil {
@@ -47,13 +55,17 @@ struct OverlayRootView: View {
                 }
 
                 // Stickers
-                ForEach(store.stickers.filter { store.validGroupID($0.groupID) == store.activeGroupID }) { sticker in
+                ForEach(store.stickers.filter {
+                    $0.id == draggingID || (store.validGroupID($0.groupID) == store.activeGroupID && belongsHere($0))
+                }) { sticker in
                     StickerView(
                         sticker: binding(for: sticker),
                         draggingID: $draggingID,
                         isOverDeleteBar: $isOverDeleteBar,
                         deleteTarget: target,
                         screenSize: geo.size,
+                        display: display,
+                        displays: displays,
                         onDelete: deleteSticker,
                         onEdit: onEdit,
                         onSaveText: { text in
@@ -67,7 +79,7 @@ struct OverlayRootView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .overlay(alignment: .top) {
-                if draggingID == nil {
+                if store.draggingDisplayID == nil && preferredDisplayID == display.id {
                     VStack(spacing: 6) {
                         groupSwitcher
                         if showingGroups { groupsPanel }
@@ -79,7 +91,7 @@ struct OverlayRootView: View {
                                 value: [proxy.frame(in: .named("stickerOverlay"))])
                         }
                     }
-                    .padding(.top, topInset + 14)
+                    .padding(.top, display.topInset + 14)
                 }
             }
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: draggingID != nil)
@@ -87,9 +99,16 @@ struct OverlayRootView: View {
             .onPreferenceChange(StickerFramePreference.self, perform: onFramesChanged)
             .onPreferenceChange(StickerResizeRegionPreference.self, perform: onResizeRegionsChanged)
             .background(Color.clear)
+            .onChange(of: store.draggingDisplayID) { _, id in
+                if id != nil { showingGroups = false }
+            }
             .onChange(of: draggingID) { oldValue, newValue in
                 onDraggingChanged(newValue != nil)
-                if newValue != nil { showingGroups = false }
+                if newValue != nil {
+                    store.draggingDisplayID = display.id
+                } else if store.draggingDisplayID == display.id {
+                    store.draggingDisplayID = nil
+                }
                 if newValue == nil {
                     StickerStore.shared.save(StickerStore.shared.stickers)
                 }
