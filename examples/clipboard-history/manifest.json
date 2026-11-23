@@ -3,13 +3,13 @@
   "id": "tech.simplife.clipboard-history",
   "name": "剪贴板历史",
   "description": "在贴纸里搜索和重新复制最近 50 条纯文本。",
-  "author": "Sticker 示例",
+  "author": "OpenSticker 示例",
   "version": "0.1.0",
   "localizations": {
     "en": {
       "name": "Clipboard History",
       "description": "Search and copy the last 50 plain-text clipboard entries.",
-      "author": "Sticker Example"
+      "author": "OpenSticker Example"
     }
   }
 }

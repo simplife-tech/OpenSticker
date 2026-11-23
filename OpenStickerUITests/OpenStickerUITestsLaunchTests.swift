@@ -1,13 +1,13 @@
 //
-//  StickerUITestsLaunchTests.swift
-//  StickerUITests
+//  OpenStickerUITestsLaunchTests.swift
+//  OpenStickerUITests
 //
 //  Created by zhouyifeng on 2025/12/19.
 //
 
 import XCTest
 
-final class StickerUITestsLaunchTests: XCTestCase {
+final class OpenStickerUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

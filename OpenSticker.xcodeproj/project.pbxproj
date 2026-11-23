@@ -12,37 +12,37 @@
 			containerPortal = F6155CBE2EF4FC8F00FBD52A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = F6155CC52EF4FC8F00FBD52A;
-			remoteInfo = Sticker;
+			remoteInfo = OpenSticker;
 		};
 		F6155CE12EF4FC9100FBD52A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F6155CBE2EF4FC8F00FBD52A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = F6155CC52EF4FC8F00FBD52A;
-			remoteInfo = Sticker;
+			remoteInfo = OpenSticker;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		F6155CC62EF4FC8F00FBD52A /* Sticker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sticker.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F6155CD62EF4FC9100FBD52A /* StickerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StickerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F6155CE02EF4FC9100FBD52A /* StickerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StickerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F6155CC62EF4FC8F00FBD52A /* OpenSticker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenSticker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F6155CD62EF4FC9100FBD52A /* OpenStickerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenStickerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F6155CE02EF4FC9100FBD52A /* OpenStickerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenStickerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		F6155CC82EF4FC8F00FBD52A /* Sticker */ = {
+		F6155CC82EF4FC8F00FBD52A /* OpenSticker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Sticker;
+			path = OpenSticker;
 			sourceTree = "<group>";
 		};
-		F6155CD92EF4FC9100FBD52A /* StickerTests */ = {
+		F6155CD92EF4FC9100FBD52A /* OpenStickerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = StickerTests;
+			path = OpenStickerTests;
 			sourceTree = "<group>";
 		};
-		F6155CE32EF4FC9100FBD52A /* StickerUITests */ = {
+		F6155CE32EF4FC9100FBD52A /* OpenStickerUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = StickerUITests;
+			path = OpenStickerUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		F6155CBD2EF4FC8F00FBD52A = {
 			isa = PBXGroup;
 			children = (
-				F6155CC82EF4FC8F00FBD52A /* Sticker */,
-				F6155CD92EF4FC9100FBD52A /* StickerTests */,
-				F6155CE32EF4FC9100FBD52A /* StickerUITests */,
+				F6155CC82EF4FC8F00FBD52A /* OpenSticker */,
+				F6155CD92EF4FC9100FBD52A /* OpenStickerTests */,
+				F6155CE32EF4FC9100FBD52A /* OpenStickerUITests */,
 				F6155CC72EF4FC8F00FBD52A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		F6155CC72EF4FC8F00FBD52A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F6155CC62EF4FC8F00FBD52A /* Sticker.app */,
-				F6155CD62EF4FC9100FBD52A /* StickerTests.xctest */,
-				F6155CE02EF4FC9100FBD52A /* StickerUITests.xctest */,
+				F6155CC62EF4FC8F00FBD52A /* OpenSticker.app */,
+				F6155CD62EF4FC9100FBD52A /* OpenStickerTests.xctest */,
+				F6155CE02EF4FC9100FBD52A /* OpenStickerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F6155CC52EF4FC8F00FBD52A /* Sticker */ = {
+		F6155CC52EF4FC8F00FBD52A /* OpenSticker */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F6155CEA2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "Sticker" */;
+			buildConfigurationList = F6155CEA2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "OpenSticker" */;
 			buildPhases = (
 				F6155CC22EF4FC8F00FBD52A /* Sources */,
 				F6155CC32EF4FC8F00FBD52A /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				F6155CC82EF4FC8F00FBD52A /* Sticker */,
+				F6155CC82EF4FC8F00FBD52A /* OpenSticker */,
 			);
-			name = Sticker;
+			name = OpenSticker;
 			packageProductDependencies = (
 			);
-			productName = Sticker;
-			productReference = F6155CC62EF4FC8F00FBD52A /* Sticker.app */;
+			productName = OpenSticker;
+			productReference = F6155CC62EF4FC8F00FBD52A /* OpenSticker.app */;
 			productType = "com.apple.product-type.application";
 		};
-		F6155CD52EF4FC9100FBD52A /* StickerTests */ = {
+		F6155CD52EF4FC9100FBD52A /* OpenStickerTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F6155CED2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "StickerTests" */;
+			buildConfigurationList = F6155CED2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "OpenStickerTests" */;
 			buildPhases = (
 				F6155CD22EF4FC9100FBD52A /* Sources */,
 				F6155CD32EF4FC9100FBD52A /* Frameworks */,
@@ -131,18 +131,18 @@
 				F6155CD82EF4FC9100FBD52A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				F6155CD92EF4FC9100FBD52A /* StickerTests */,
+				F6155CD92EF4FC9100FBD52A /* OpenStickerTests */,
 			);
-			name = StickerTests;
+			name = OpenStickerTests;
 			packageProductDependencies = (
 			);
-			productName = StickerTests;
-			productReference = F6155CD62EF4FC9100FBD52A /* StickerTests.xctest */;
+			productName = OpenStickerTests;
+			productReference = F6155CD62EF4FC9100FBD52A /* OpenStickerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		F6155CDF2EF4FC9100FBD52A /* StickerUITests */ = {
+		F6155CDF2EF4FC9100FBD52A /* OpenStickerUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F6155CF02EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "StickerUITests" */;
+			buildConfigurationList = F6155CF02EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "OpenStickerUITests" */;
 			buildPhases = (
 				F6155CDC2EF4FC9100FBD52A /* Sources */,
 				F6155CDD2EF4FC9100FBD52A /* Frameworks */,
@@ -154,13 +154,13 @@
 				F6155CE22EF4FC9100FBD52A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				F6155CE32EF4FC9100FBD52A /* StickerUITests */,
+				F6155CE32EF4FC9100FBD52A /* OpenStickerUITests */,
 			);
-			name = StickerUITests;
+			name = OpenStickerUITests;
 			packageProductDependencies = (
 			);
-			productName = StickerUITests;
-			productReference = F6155CE02EF4FC9100FBD52A /* StickerUITests.xctest */;
+			productName = OpenStickerUITests;
+			productReference = F6155CE02EF4FC9100FBD52A /* OpenStickerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F6155CC12EF4FC8F00FBD52A /* Build configuration list for PBXProject "Sticker" */;
+			buildConfigurationList = F6155CC12EF4FC8F00FBD52A /* Build configuration list for PBXProject "OpenSticker" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -201,9 +201,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F6155CC52EF4FC8F00FBD52A /* Sticker */,
-				F6155CD52EF4FC9100FBD52A /* StickerTests */,
-				F6155CDF2EF4FC9100FBD52A /* StickerUITests */,
+				F6155CC52EF4FC8F00FBD52A /* OpenSticker */,
+				F6155CD52EF4FC9100FBD52A /* OpenStickerTests */,
+				F6155CDF2EF4FC9100FBD52A /* OpenStickerUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -259,12 +259,12 @@
 /* Begin PBXTargetDependency section */
 		F6155CD82EF4FC9100FBD52A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F6155CC52EF4FC8F00FBD52A /* Sticker */;
+			target = F6155CC52EF4FC8F00FBD52A /* OpenSticker */;
 			targetProxy = F6155CD72EF4FC9100FBD52A /* PBXContainerItemProxy */;
 		};
 		F6155CE22EF4FC9100FBD52A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F6155CC52EF4FC8F00FBD52A /* Sticker */;
+			target = F6155CC52EF4FC8F00FBD52A /* OpenSticker */;
 			targetProxy = F6155CE12EF4FC9100FBD52A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -393,22 +393,22 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Sticker/Sticker.entitlements;
+				CODE_SIGN_ENTITLEMENTS = OpenSticker/OpenSticker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 6N4288N944;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Sticker/Info.plist;
+				INFOPLIST_FILE = OpenSticker/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.sticker;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.opensticker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -421,23 +421,23 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Sticker/StickerRelease.entitlements;
+				CODE_SIGN_ENTITLEMENTS = OpenSticker/OpenStickerRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 6N4288N944;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Sticker/Info.plist;
+				INFOPLIST_FILE = OpenSticker/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.sticker;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.opensticker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -450,15 +450,15 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.StickerTests;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.OpenStickerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sticker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Sticker";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenSticker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenSticker";
 			};
 			name = Debug;
 		};
@@ -467,15 +467,15 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.StickerTests;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.OpenStickerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sticker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Sticker";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenSticker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenSticker";
 			};
 			name = Release;
 		};
@@ -483,14 +483,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.StickerUITests;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.OpenStickerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = Sticker;
+				TEST_TARGET_NAME = OpenSticker;
 			};
 			name = Debug;
 		};
@@ -498,21 +498,21 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.StickerUITests;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.simplife.OpenStickerUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = Sticker;
+				TEST_TARGET_NAME = OpenSticker;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		F6155CC12EF4FC8F00FBD52A /* Build configuration list for PBXProject "Sticker" */ = {
+		F6155CC12EF4FC8F00FBD52A /* Build configuration list for PBXProject "OpenSticker" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F6155CE82EF4FC9100FBD52A /* Debug */,
@@ -521,7 +521,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F6155CEA2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "Sticker" */ = {
+		F6155CEA2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "OpenSticker" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F6155CEB2EF4FC9100FBD52A /* Debug */,
@@ -530,7 +530,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F6155CED2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "StickerTests" */ = {
+		F6155CED2EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "OpenStickerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F6155CEE2EF4FC9100FBD52A /* Debug */,
@@ -539,7 +539,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F6155CF02EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "StickerUITests" */ = {
+		F6155CF02EF4FC9100FBD52A /* Build configuration list for PBXNativeTarget "OpenStickerUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F6155CF12EF4FC9100FBD52A /* Debug */,

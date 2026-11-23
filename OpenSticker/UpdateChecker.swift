@@ -5,8 +5,8 @@ final class UpdateChecker {
     static let shared = UpdateChecker()
     private(set) var isChecking = false
 
-    private let latestAPI = URL(string: "https://api.github.com/repos/simplife-tech/Sticker/releases/latest")!
-    private let releasePage = URL(string: "https://github.com/simplife-tech/Sticker/releases/latest")!
+    private let latestAPI = URL(string: "https://api.github.com/repos/simplife-tech/OpenSticker/releases/latest")!
+    private let releasePage = URL(string: "https://github.com/simplife-tech/OpenSticker/releases/latest")!
 
     private struct Release: Decodable {
         let tag_name: String
@@ -38,7 +38,7 @@ final class UpdateChecker {
                     show(L10n.format("发现新版本 %@", tag), detail: L10n.format("当前版本为 %@。可以前往 GitHub 下载新版。", current),
                          offerDownload: true)
                 } else {
-                    show(L10n.text("当前已是最新版本"), detail: "Sticker \(current)")
+                    show(L10n.text("当前已是最新版本"), detail: "OpenSticker \(current)")
                 }
             } catch {
                 show(L10n.text("无法检查更新"), detail: L10n.text("暂时无法获取 GitHub 发布信息，请稍后重试。"))
@@ -58,8 +58,8 @@ final class UpdateChecker {
     private var keychainItem: [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "tech.simplife.sticker.github-updates",
-            kSecAttrAccount as String: "simplife-tech/Sticker"
+            kSecAttrService as String: "tech.simplife.opensticker.github-updates",
+            kSecAttrAccount as String: "simplife-tech/OpenSticker"
         ]
     }
 
@@ -87,10 +87,10 @@ final class UpdateChecker {
     }
 
     @MainActor func requestToken(replacing: Bool, importing: Bool = false) -> String? {
-        let alert = NSAlert()
+        let alert = updateAlert()
         alert.messageText = importing ? L10n.text("访问私有插件仓库")
             : replacing ? L10n.text("GitHub 令牌无法读取版本") : L10n.text("检查私有仓库的版本")
-        alert.informativeText = L10n.text("请输入对 simplife-tech/Sticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。")
+        alert.informativeText = L10n.text("请输入对 simplife-tech/OpenSticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。")
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 290, height: 24))
         field.placeholderString = L10n.text("GitHub 令牌")
         alert.accessoryView = field
@@ -112,8 +112,17 @@ final class UpdateChecker {
         return parts + Array(repeating: 0, count: 3 - parts.count)
     }
 
-    @MainActor private func show(_ title: String, detail: String, offerDownload: Bool = false) {
+    @MainActor private func updateAlert() -> NSAlert {
         let alert = NSAlert()
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let icon = NSImage(contentsOf: iconURL) {
+            alert.icon = icon
+        }
+        return alert
+    }
+
+    @MainActor private func show(_ title: String, detail: String, offerDownload: Bool = false) {
+        let alert = updateAlert()
         alert.messageText = title
         alert.informativeText = detail
         if offerDownload { alert.addButton(withTitle: L10n.text("前往下载")) }

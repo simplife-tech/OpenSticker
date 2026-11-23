@@ -18,6 +18,12 @@ struct StickerPluginWebView: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         config.userContentController.add(context.coordinator, name: "sticker")
+        config.userContentController.addScriptMessageHandler(context.coordinator, contentWorld: .page,
+                                                             name: "stickerConfiguration")
+        config.userContentController.addScriptMessageHandler(context.coordinator, contentWorld: .page,
+                                                             name: "stickerNetwork")
+        config.userContentController.addScriptMessageHandler(context.coordinator, contentWorld: .page,
+                                                             name: "stickerAI")
         let webView = PluginWebView(frame: .zero, configuration: config)
         // The under-page color alone does not disable WebKit's white page backing on macOS.
         webView.underPageBackgroundColor = .clear
@@ -39,16 +45,26 @@ struct StickerPluginWebView: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
+        coordinator.cancelNetworkRequests()
+        coordinator.cancelAIRequest()
         coordinator.finishDrag()
         webView.stopLoading()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "sticker")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "stickerConfiguration",
+                                                                                contentWorld: .page)
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "stickerAI",
+                                                                                contentWorld: .page)
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "stickerNetwork",
+                                                                                contentWorld: .page)
     }
 
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
         var parent: StickerPluginWebView
         private var awaitingInitialNavigation = false
         private var documentID = ""
         private(set) var loadedLanguage = ""
+        private var aiTask: Task<Void, Never>?
+        private var networkTasks: [UUID: Task<Void, Never>] = [:]
         private var isDragging = false
         private var lastHistorySnapshot: ClipboardHistory.Snapshot?
 
@@ -71,6 +87,8 @@ struct StickerPluginWebView: NSViewRepresentable {
         }
 
         func load(in webView: WKWebView) {
+            cancelNetworkRequests()
+            cancelAIRequest()
             finishDrag()
             webView.stopLoading()
             documentID = UUID().uuidString
@@ -117,9 +135,31 @@ struct StickerPluginWebView: NSViewRepresentable {
                 window.addEventListener("pointercancel", finish, true);
                 window.addEventListener("lostpointercapture", finish, true);
               }
-              window.Sticker = Object.freeze({
+              window.OpenSticker = window.Sticker = Object.freeze({
                 mode: "\(parent.mode.rawValue)",
                 locale: "\(L10n.language.hasPrefix("zh") ? "zh-Hans" : "en")",
+                ai: Object.freeze({
+                  async generate(prompt, schema) {
+                    const result = await window.webkit.messageHandlers.stickerAI.postMessage({
+                      document: "\(documentID)", prompt, schema
+                    });
+                    return JSON.parse(result);
+                  }
+                }),
+                network: Object.freeze({
+                  request(options) {
+                    return window.webkit.messageHandlers.stickerNetwork.postMessage({
+                      document: "\(documentID)", options
+                    });
+                  }
+                }),
+                config: Object.freeze({
+                  get(key) {
+                    return window.webkit.messageHandlers.stickerConfiguration.postMessage({
+                      document: "\(documentID)", key
+                    });
+                  }
+                }),
                 get(key) { return values[key] ?? ""; },
                 set(key, value) {
                   if (typeof key !== "string" || typeof value !== "string"
@@ -189,6 +229,126 @@ struct StickerPluginWebView: NSViewRepresentable {
                 finishDrag(at: value == "pointerup" ? pointerPosition(in: message.webView) : nil)
             default:
                 break
+            }
+        }
+
+        func userContentController(_ userContentController: WKUserContentController,
+                                   didReceive message: WKScriptMessage,
+                                   replyHandler: @escaping (Any?, String?) -> Void) {
+            if message.name == "stickerAI" {
+                handleAI(message, reply: replyHandler)
+                return
+            }
+            if message.name == "stickerNetwork" {
+                handleNetwork(message, reply: replyHandler)
+                return
+            }
+            let plugin = parent.plugin
+            guard message.frameInfo.isMainFrame,
+                  let body = message.body as? [String: String], body["document"] == documentID,
+                  let key = body["key"], plugin.manifest.configuration?.contains(where: { $0.key == key }) == true,
+                  StickerPluginRegistry.shared.plugins.contains(plugin),
+                  PluginConfiguration.shared.isAuthorized(plugin) else {
+                replyHandler(nil, L10n.text("插件未获准读取这项配置。"))
+                return
+            }
+            do {
+                if let value = try PluginConfiguration.shared.value(for: key) {
+                    replyHandler(value, nil)
+                } else {
+                    replyHandler(NSNull(), nil)
+                }
+            } catch {
+                replyHandler(nil, L10n.text("无法读取共享配置。"))
+            }
+        }
+
+        func cancelAIRequest() {
+            aiTask?.cancel()
+        }
+
+        private func handleAI(_ message: WKScriptMessage, reply: @escaping (Any?, String?) -> Void) {
+            let plugin = parent.plugin
+            guard message.frameInfo.isMainFrame, parent.mode == .card,
+                  let body = message.body as? [String: Any], body["document"] as? String == documentID,
+                  plugin.manifest.usesLocalAI == true,
+                  StickerPluginRegistry.shared.plugins.contains(plugin),
+                  PluginConfiguration.shared.isAIAuthorized(plugin) else {
+                reply(nil, L10n.text("请在插件配置中授权使用 AI 能力。"))
+                return
+            }
+            guard let prompt = body["prompt"] as? String, (1...4096).contains(prompt.utf8.count),
+                  let schema = body["schema"] as? [String: Any], schema["type"] as? String == "object",
+                  JSONSerialization.isValidJSONObject(schema),
+                  let data = try? JSONSerialization.data(withJSONObject: schema), data.count <= 8192 else {
+                reply(nil, L10n.text("AI 请求参数无效。"))
+                return
+            }
+            guard aiTask == nil else {
+                reply(nil, L10n.text("AI 正在处理另一条请求。"))
+                return
+            }
+            let document = documentID
+            aiTask = Task { @MainActor [weak self] in
+                defer { self?.aiTask = nil }
+                do {
+                    let result = try await PluginAI.run(prompt: prompt, schema: data)
+                    guard self?.documentID == document,
+                          StickerPluginRegistry.shared.plugins.contains(plugin),
+                          PluginConfiguration.shared.isAIAuthorized(plugin) else { throw CancellationError() }
+                    reply(String(decoding: result, as: UTF8.self), nil)
+                } catch PluginAI.Failure.unavailable {
+                    reply(nil, L10n.text("请先在插件配置中填写模型服务信息。"))
+                } catch PluginAI.Failure.busy {
+                    reply(nil, L10n.text("AI 正在处理另一条请求。"))
+                } catch PluginAI.Failure.timedOut {
+                    reply(nil, L10n.text("AI 请求超时。"))
+                } catch PluginAI.Failure.http(let status) {
+                    reply(nil, L10n.format("模型服务返回 HTTP %@。", String(status)))
+                } catch is CancellationError {
+                    reply(nil, L10n.text("AI 请求已取消。"))
+                } catch {
+                    reply(nil, L10n.text("模型请求失败，请检查服务地址或响应格式。"))
+                }
+            }
+        }
+
+        func cancelNetworkRequests() {
+            for task in networkTasks.values { task.cancel() }
+            networkTasks.removeAll()
+        }
+
+        private func handleNetwork(_ message: WKScriptMessage, reply: @escaping (Any?, String?) -> Void) {
+            let plugin = parent.plugin
+            guard message.frameInfo.isMainFrame,
+                  let body = message.body as? [String: Any], body["document"] as? String == documentID,
+                  let input = body["options"] as? [String: Any],
+                  StickerPluginRegistry.shared.plugins.contains(plugin),
+                  PluginConfiguration.shared.isNetworkAuthorized(plugin),
+                  let request = PluginNetwork.request(from: input, hosts: plugin.manifest.networkHosts ?? []) else {
+                reply(nil, L10n.text("插件网络请求未获授权或参数无效。"))
+                return
+            }
+            guard networkTasks.count < 4 else {
+                reply(nil, L10n.text("插件网络请求过多。"))
+                return
+            }
+            let id = UUID()
+            let document = documentID
+            networkTasks[id] = Task { @MainActor [weak self] in
+                defer { self?.networkTasks.removeValue(forKey: id) }
+                do {
+                    let response = try await PluginNetwork.send(request)
+                    guard !Task.isCancelled, self?.documentID == document,
+                          StickerPluginRegistry.shared.plugins.contains(plugin),
+                          PluginConfiguration.shared.isNetworkAuthorized(plugin) else {
+                        reply(nil, L10n.text("插件网络请求已取消。"))
+                        return
+                    }
+                    reply(response, nil)
+                } catch {
+                    reply(nil, L10n.text("插件网络请求失败。"))
+                }
             }
         }
 

@@ -68,6 +68,34 @@ struct Sticker: Identifiable, Equatable, Codable {
 }
 
 extension Sticker {
+    private enum DecodingKeys: String, CodingKey {
+        case id, content, text, scopes, displayID, groupID, plugin, isCollapsed
+        case paperColor, paperOpacity, textSize, imageSize, normalizedPosition
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: DecodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        normalizedPosition = try container.decode(CGPoint.self, forKey: .normalizedPosition)
+        if container.contains(.content) {
+            content = try container.decode(StickerContent.self, forKey: .content)
+            scopes = try container.decode(Set<StickerScope>.self, forKey: .scopes)
+        } else {
+            content = .text(try container.decode(String.self, forKey: .text))
+            scopes = try container.decodeIfPresent(Set<StickerScope>.self, forKey: .scopes) ?? [.global]
+        }
+        displayID = try container.decodeIfPresent(String.self, forKey: .displayID)
+        groupID = try container.decodeIfPresent(UUID.self, forKey: .groupID)
+        plugin = try container.decodeIfPresent(StickerPluginState.self, forKey: .plugin)
+        isCollapsed = try container.decodeIfPresent(Bool.self, forKey: .isCollapsed)
+        paperColor = try container.decodeIfPresent(StickerPaperColor.self, forKey: .paperColor)
+        paperOpacity = try container.decodeIfPresent(Double.self, forKey: .paperOpacity)
+        textSize = try container.decodeIfPresent(CGSize.self, forKey: .textSize)
+        imageSize = try container.decodeIfPresent(CGSize.self, forKey: .imageSize) ?? CGSize(width: 200, height: 200)
+    }
+}
+
+extension Sticker {
     
     func isVisible(in context: StickerContext) -> Bool {
         // 没有任何 scope，默认不显示（防脏数据）

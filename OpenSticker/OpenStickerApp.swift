@@ -1,6 +1,6 @@
 //
-//  StickerApp.swift
-//  Sticker
+//  OpenStickerApp.swift
+//  OpenSticker
 //
 //  Created by zhouyifeng on 2025/12/19.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct StickerApp: App {
+struct OpenStickerApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self)
     var appDelegate

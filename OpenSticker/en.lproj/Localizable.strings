@@ -130,7 +130,7 @@
 "请检查贴纸是否仍存在，以及资源文件夹是否可写。" = "Check that the sticker still exists and the storage folder is writable.";
 "请输入 GitHub 上的插件文件夹链接，例如 github.com/组织/仓库/tree/main/插件目录。" = "Enter a GitHub folder link, such as github.com/owner/repo/tree/main/plugin-folder.";
 "请输入一个未使用的分组名称。" = "Enter a group name that isn't already in use.";
-"请输入对 simplife-tech/Sticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。" = "Enter a GitHub token with Contents read access to simplife-tech/Sticker. Sticker saves it in Keychain for update checks and plugin imports from this repository.";
+"请输入对 simplife-tech/OpenSticker 有 Contents 读取权限的 GitHub 令牌。验证成功后会保存到系统钥匙串，供版本检查和该仓库的插件导入使用。" = "Enter a GitHub token with Contents read access to simplife-tech/OpenSticker. OpenSticker saves it in Keychain for update checks and plugin imports from this repository.";
 "调整贴纸大小" = "Resize Sticker";
 "贴纸内容" = "Sticker Content";
 "贴纸外观" = "Sticker Appearance";
@@ -141,7 +141,7 @@
 "输入文字或粘贴图片" = "Type text or paste an image";
 "这里还没有贴纸" = "No Stickers Here";
 "退出" = "Quit";
-"退出 Sticker" = "Quit Sticker";
+"退出 OpenSticker" = "Quit OpenSticker";
 "选择其他文件夹…" = "Choose Another Folder…";
 "选择资源文件夹" = "Choose Storage Folder";
 "重命名…" = "Rename…";
@@ -171,3 +171,53 @@
 "删除贴纸？" = "Delete Sticker?";
 "更多贴纸操作" = "More Sticker Actions";
 "数据文件未成功读取或已在其他地方修改，请重新读取贴纸后再保存。" = "Sticker data could not be read or changed elsewhere. Reload your stickers before saving.";
+"插件配置…" = "Plugin Settings…";
+"插件配置" = "Plugin Settings";
+"没有共享配置" = "No Shared Settings";
+"安装声明了配置项的插件后，配置项会出现在这里。" = "Settings appear here when an installed plugin declares them.";
+"共享配置" = "Shared Settings";
+"插件读取权限" = "Plugin Access";
+"撤销读取权限" = "Revoke Access";
+"授权读取…" = "Grant Access…";
+"允许插件读取配置？" = "Allow Plugin to Read Settings?";
+"「%@」可以读取这些配置的原始值，包括密码和密钥。只授权你信任的插件。\n%@" = "“%@” can read the values of these settings, including passwords and secrets. Grant access only to plugins you trust.\n%@";
+"已配置" = "Configured";
+"清除" = "Clear";
+"输入新值" = "Enter a new value";
+"配置值过长。" = "The setting value is too long.";
+"插件未获准读取这项配置。" = "This plugin is not authorized to read this setting.";
+"无法读取共享配置。" = "Could not read the shared setting.";
+
+"保存后清除" = "Clears on save";
+
+"插件网络权限" = "Plugin Network Access";
+"撤销网络权限" = "Revoke Network Access";
+"授权联网…" = "Allow Network Access…";
+"允许插件联网？" = "Allow the plugin to access the network?";
+"「%@」可以向下列域名发送数据。只授权你信任的插件。\n%@" = "“%@” can send data to these domains. Only allow plugins you trust.\n%@";
+"插件网络请求未获授权或参数无效。" = "The network request is not authorized or has invalid parameters.";
+"插件网络请求过多。" = "Too many plugin network requests.";
+"插件网络请求已取消。" = "The plugin network request was canceled.";
+"插件网络请求失败。" = "The plugin network request failed.";
+
+"AI 能力权限" = "AI Access";
+"撤销 AI 权限" = "Revoke AI Access";
+"授权使用 AI…" = "Allow AI Access…";
+"允许插件使用 AI 能力？" = "Allow this plugin to use AI?";
+"请在插件配置中授权使用 AI 能力。" = "Allow AI access in Plugin Settings.";
+"AI 请求参数无效。" = "Invalid AI request.";
+"AI 正在处理另一条请求。" = "AI Capabilities is processing another request.";
+"AI 请求超时。" = "The AI request timed out.";
+"AI 请求已取消。" = "The AI request was canceled.";
+
+"AI 能力" = "AI Capabilities";
+
+"模型 ID" = "Model ID";
+
+"模型名称" = "Model Name";
+"请输入有效的 HTTP 或 HTTPS Base URL。" = "Enter a valid HTTP or HTTPS base URL.";
+"模型名称或 API Key 无效。" = "The model name or API key is invalid.";
+"「%@」可以向你配置的模型服务发送请求。只授权你信任的插件。" = "“%@” can send requests to your configured AI provider. Only allow plugins you trust.";
+"请先在插件配置中填写模型服务信息。" = "Set up the model provider in Plugin Settings.";
+"模型请求失败，请检查服务地址或响应格式。" = "The model request failed. Check the provider URL or response format.";
+"模型服务返回 HTTP %@。" = "The model provider returned HTTP %@.";

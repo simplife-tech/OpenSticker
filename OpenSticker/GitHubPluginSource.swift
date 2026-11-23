@@ -8,7 +8,7 @@ struct GitHubPluginSource {
     let folder: [String]
 
     var usesStickerCredentials: Bool {
-        "\(owner)/\(repository)".lowercased() == "simplife-tech/sticker"
+        ["simplife-tech/opensticker", "simplife-tech/sticker"].contains("\(owner)/\(repository)".lowercased())
     }
 
     init(_ link: String) throws {

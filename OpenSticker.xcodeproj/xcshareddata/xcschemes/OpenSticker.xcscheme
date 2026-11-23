@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F6155CC52EF4FC8F00FBD52A"
-               BuildableName = "Sticker.app"
-               BlueprintName = "Sticker"
-               ReferencedContainer = "container:Sticker.xcodeproj">
+               BuildableName = "OpenSticker.app"
+               BlueprintName = "OpenSticker"
+               ReferencedContainer = "container:OpenSticker.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F6155CD52EF4FC9100FBD52A"
-               BuildableName = "StickerTests.xctest"
-               BlueprintName = "StickerTests"
-               ReferencedContainer = "container:Sticker.xcodeproj">
+               BuildableName = "OpenStickerTests.xctest"
+               BlueprintName = "OpenStickerTests"
+               ReferencedContainer = "container:OpenSticker.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F6155CDF2EF4FC9100FBD52A"
-               BuildableName = "StickerUITests.xctest"
-               BlueprintName = "StickerUITests"
-               ReferencedContainer = "container:Sticker.xcodeproj">
+               BuildableName = "OpenStickerUITests.xctest"
+               BlueprintName = "OpenStickerUITests"
+               ReferencedContainer = "container:OpenSticker.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,9 +69,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F6155CC52EF4FC8F00FBD52A"
-            BuildableName = "Sticker.app"
-            BlueprintName = "Sticker"
-            ReferencedContainer = "container:Sticker.xcodeproj">
+            BuildableName = "OpenSticker.app"
+            BlueprintName = "OpenSticker"
+            ReferencedContainer = "container:OpenSticker.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -86,9 +86,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F6155CC52EF4FC8F00FBD52A"
-            BuildableName = "Sticker.app"
-            BlueprintName = "Sticker"
-            ReferencedContainer = "container:Sticker.xcodeproj">
+            BuildableName = "OpenSticker.app"
+            BlueprintName = "OpenSticker"
+            ReferencedContainer = "container:OpenSticker.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

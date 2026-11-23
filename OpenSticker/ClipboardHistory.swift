@@ -71,9 +71,15 @@ final class ClipboardHistory {
         changeCount = pasteboard.changeCount
     }
 
-    func revokeIfChanged(installed: [StickerPlugin]) {
-        guard let authorizedPlugin, !installed.contains(authorizedPlugin) else { return }
-        reset()
+    func reconcile(installed: [StickerPlugin]) {
+        guard let authorizedPlugin else { return }
+        guard let updated = installed.first(where: {
+            $0.isUpdate(of: authorizedPlugin)
+        }) else {
+            reset()
+            return
+        }
+        self.authorizedPlugin = updated
     }
 
     func reset() {

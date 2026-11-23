@@ -12,17 +12,31 @@ import SwiftUI
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
 
+    private var configurationWindow: NSWindow?
     private var pluginWindow: NSWindow?
     private var libraryWindow: NSWindow?
 
     let hotKey = HotKeyManager()
-    let store = StickerStore.shared
+    lazy var store = StickerStore.shared
     let contextController = ContextController()
     lazy var overlay = OverlayWindowController(store: store, contextController: contextController) { [weak self] in
         self?.showStickerLibrary()
     }
 
-    private let location = StickerResourceLocation.shared
+    private lazy var location = StickerResourceLocation.shared
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        let defaults = UserDefaults.standard
+        let migrationKey = "OpenStickerMigratedPreferences"
+        guard !defaults.bool(forKey: migrationKey),
+              let bundleID = Bundle.main.bundleIdentifier else { return }
+        let old = defaults.persistentDomain(forName: "tech.simplife.sticker") ?? [:]
+        let current = defaults.persistentDomain(forName: bundleID) ?? [:]
+        for (key, value) in old where current[key] == nil {
+            defaults.set(value, forKey: key)
+        }
+        defaults.set(true, forKey: migrationKey)
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
@@ -75,11 +89,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(menuItem(L10n.text("管理贴纸…"), icon: "note.text", action: #selector(showStickerLibrary)))
         menu.addItem(.separator())
         menu.addItem(menuItem(L10n.text("插件管理…"), icon: "puzzlepiece.extension", action: #selector(managePlugins)))
+        menu.addItem(menuItem(L10n.text("插件配置…"), icon: "key", action: #selector(showPluginConfiguration)))
         menu.addItem(resourceMenuItem())
         menu.addItem(.separator())
         menu.addItem(languageMenuItem())
         menu.addItem(menuItem(L10n.text("检查更新…"), icon: "arrow.down.circle", action: #selector(checkForUpdates)))
-        menu.addItem(menuItem(L10n.text("退出 Sticker"), icon: "power", action: #selector(NSApplication.terminate(_:)),
+        menu.addItem(menuItem(L10n.text("退出 OpenSticker"), icon: "power", action: #selector(NSApplication.terminate(_:)),
                               key: "q", target: NSApp))
         return menu
     }
@@ -104,6 +119,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         L10n.shared.select(choice)
         libraryWindow?.title = L10n.text("贴纸管理")
         pluginWindow?.title = L10n.text("插件管理")
+        configurationWindow?.title = L10n.text("插件配置")
         refreshMenu()
     }
 
@@ -139,6 +155,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         UpdateChecker.shared.check {
             sender.title = L10n.text("检查更新…")
         }
+    }
+
+    @objc private func showPluginConfiguration() {
+        if configurationWindow == nil {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 560, height: 480),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered, defer: false
+            )
+            window.title = L10n.text("插件配置")
+            window.isReleasedWhenClosed = false
+            let hostingView = NSHostingView(rootView: PluginConfigurationView())
+            hostingView.sizingOptions = []
+            // Keep the window sized independently of the number of settings rows.
+            let container = NSView(frame: NSRect(origin: .zero, size: NSSize(width: 560, height: 480)))
+            hostingView.frame = container.bounds
+            hostingView.autoresizingMask = [.width, .height]
+            container.addSubview(hostingView)
+            window.contentView = container
+            window.contentMinSize = NSSize(width: 460, height: 360)
+            window.center()
+            configurationWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        configurationWindow?.makeKeyAndOrderFront(nil)
     }
 
     @objc private func managePlugins() {

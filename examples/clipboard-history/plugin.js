@@ -14,7 +14,7 @@
   if (api.mode === "create" || !api.history) {
     app.append(element("p", api.mode === "create"
       ? t("创建后即可开启记录，搜索并重新复制最近的纯文本。", "After creating the sticker, start recording to search and copy recent text.")
-      : t("请更新 Sticker 以使用剪贴板历史。", "Update Sticker to use Clipboard History.")));
+      : t("请更新 OpenSticker 以使用剪贴板历史。", "Update OpenSticker to use Clipboard History.")));
     return;
   }
 

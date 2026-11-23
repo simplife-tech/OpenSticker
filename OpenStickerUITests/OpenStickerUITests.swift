@@ -1,13 +1,13 @@
 //
-//  StickerUITests.swift
-//  StickerUITests
+//  OpenStickerUITests.swift
+//  OpenStickerUITests
 //
 //  Created by zhouyifeng on 2025/12/19.
 //
 
 import XCTest
 
-final class StickerUITests: XCTestCase {
+final class OpenStickerUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

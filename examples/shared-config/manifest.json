@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "id": "tech.simplife.shared-config-example",
+  "name": "共享配置示例",
+  "description": "检查共享配置是否可读，不显示配置原值。",
+  "version": "0.1.0",
+  "configuration": [
+    { "key": "bili/username", "type": "text", "label": "用户名", "localizations": { "en": "Username" } },
+    { "key": "bili/password", "type": "secret", "label": "密码", "localizations": { "en": "Password" } },
+    { "key": "bili/totp_secret", "type": "secret", "label": "TOTP 密钥", "localizations": { "en": "TOTP secret" } }
+  ],
+  "localizations": {
+    "en": {
+      "name": "Shared Settings Example",
+      "description": "Check shared setting access without displaying values."
+    }
+  }
+}

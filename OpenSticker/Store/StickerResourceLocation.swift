@@ -17,8 +17,9 @@ final class StickerResourceLocation {
     private(set) var rootURL: URL
 
     private init() {
-        if let url = Self.restoreBookmark() {
-            rootURL = url
+        if let restored = Self.restoreBookmark() {
+            rootURL = restored.url
+            if restored.refresh { saveBookmark(for: restored.url) }
         } else {
             rootURL = Self.defaultURL()
         }
@@ -71,14 +72,29 @@ final class StickerResourceLocation {
             in: .userDomainMask
         ).first!
 
-        return base.appendingPathComponent("Sticker", isDirectory: true)
+        let destination = base.appendingPathComponent("OpenSticker", isDirectory: true)
+        let previous = base.appendingPathComponent("Sticker", isDirectory: true)
+        let manager = FileManager.default
+        if manager.fileExists(atPath: destination.path) || !manager.fileExists(atPath: previous.path) {
+            return destination
+        }
+
+        let staging = base.appendingPathComponent(".OpenSticker-migration-" + UUID().uuidString, isDirectory: true)
+        defer { try? manager.removeItem(at: staging) }
+        do {
+            try manager.copyItem(at: previous, to: staging)
+            try manager.moveItem(at: staging, to: destination)
+            return destination
+        } catch {
+            return manager.fileExists(atPath: destination.path) ? destination : previous
+        }
     }
 
     // MARK: - Bookmark
 
     private func saveBookmark(for url: URL) {
         let data = try? url.bookmarkData(
-            options: .withSecurityScope,
+            options: [],
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
@@ -89,19 +105,22 @@ final class StickerResourceLocation {
         UserDefaults.standard.removeObject(forKey: bookmarkKey)
     }
 
-    private static func restoreBookmark() -> URL? {
+    private static func restoreBookmark() -> (url: URL, refresh: Bool)? {
         guard let data = UserDefaults.standard.data(forKey: "StickerResourceBookmark") else {
             return nil
         }
 
         var isStale = false
-        let url = try? URL(
-            resolvingBookmarkData: data,
-            options: .withSecurityScope,
-            bookmarkDataIsStale: &isStale
-        )
+        if let url = try? URL(resolvingBookmarkData: data, options: [.withSecurityScope, .withoutUI],
+                              relativeTo: nil, bookmarkDataIsStale: &isStale) {
+            _ = url.startAccessingSecurityScopedResource()
+            return (url, isStale)
+        }
 
-        _ = url?.startAccessingSecurityScopedResource()
-        return url
+        // The old Bundle ID's security scope can fail after a rename.
+        // The app runs outside App Sandbox and can use the resolved folder directly.
+        guard let url = try? URL(resolvingBookmarkData: data, options: .withoutUI,
+                                 relativeTo: nil, bookmarkDataIsStale: &isStale) else { return nil }
+        return (url, isStale)
     }
 }

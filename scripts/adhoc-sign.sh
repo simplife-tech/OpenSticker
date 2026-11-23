@@ -5,7 +5,7 @@ set -e
 APP_PATH="$1"
 
 if [ -z "$APP_PATH" ]; then
-  echo "❌ 用法: ./adhoc-sign.sh /Applications/Sticker.app"
+  echo "❌ 用法: ./adhoc-sign.sh /Applications/OpenSticker.app"
   exit 1
 fi
 
