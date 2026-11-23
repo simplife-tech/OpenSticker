@@ -15,7 +15,7 @@
     button.disabled = true;
     results.replaceChildren();
     try {
-      for (const key of ["bili/username", "bili/password", "bili/totp_secret"]) {
+      for (const key of ["example/username", "example/password", "example/api_key"]) {
         const row = document.createElement("li");
         let status;
         try {

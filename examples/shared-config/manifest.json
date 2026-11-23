@@ -5,9 +5,9 @@
   "description": "检查共享配置是否可读，不显示配置原值。",
   "version": "0.1.0",
   "configuration": [
-    { "key": "bili/username", "type": "text", "label": "用户名", "localizations": { "en": "Username" } },
-    { "key": "bili/password", "type": "secret", "label": "密码", "localizations": { "en": "Password" } },
-    { "key": "bili/totp_secret", "type": "secret", "label": "TOTP 密钥", "localizations": { "en": "TOTP secret" } }
+    { "key": "example/username", "type": "text", "label": "用户名", "localizations": { "en": "Username" } },
+    { "key": "example/password", "type": "secret", "label": "密码", "localizations": { "en": "Password" } },
+    { "key": "example/api_key", "type": "secret", "label": "API 密钥", "localizations": { "en": "API key" } }
   ],
   "localizations": {
     "en": {

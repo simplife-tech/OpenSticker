@@ -32,16 +32,16 @@ Add `data-sticker-no-drag` to custom interactive areas that should not start a c
 
 ## Shared configuration · 共享配置
 
-Declare shared settings in `manifest.json`. Use a stable namespaced key such as `bili/username`. OpenSticker displays one setting per key even when several plugins declare it. If any declaration marks a key as `secret`, the settings window masks input for that key. Use `localizations` on each entry for translated field labels.
+Declare shared settings in `manifest.json`. Use a stable namespaced key such as `example/username`. OpenSticker displays one setting per key even when several plugins declare it. If any declaration marks a key as `secret`, the settings window masks input for that key. Use `localizations` on each entry for translated field labels.
 
 在 `manifest.json` 的 `configuration` 中声明共享配置。相同的键在「插件配置」里只有一份。只要任一插件将它声明为 `secret`，设置窗口就会遮住输入。所有值保存在 macOS 钥匙串里。
 
 ```json
 {
   "configuration": [
-    { "key": "bili/username", "type": "text", "label": "用户名", "localizations": { "en": "Username" } },
-    { "key": "bili/password", "type": "secret", "label": "密码" },
-    { "key": "bili/totp_secret", "type": "secret", "label": "TOTP 密钥" }
+    { "key": "example/username", "type": "text", "label": "用户名", "localizations": { "en": "Username" } },
+    { "key": "example/password", "type": "secret", "label": "密码" },
+    { "key": "example/api_key", "type": "secret", "label": "API 密钥" }
   ]
 }
 ```
