@@ -221,3 +221,26 @@
 "请先在插件配置中填写模型服务信息。" = "Set up the model provider in Plugin Settings.";
 "模型请求失败，请检查服务地址或响应格式。" = "The model request failed. Check the provider URL or response format.";
 "模型服务返回 HTTP %@。" = "The model provider returned HTTP %@.";
+
+"在贴纸上确认的本机地址" = "Local address confirmed on the sticker";
+"设置本机服务地址" = "Set Local Service Address";
+"请输入 127.0.0.1 和服务端口。留空恢复插件默认地址。" = "Enter 127.0.0.1 and the service port. Leave it blank to restore the plugin default.";
+"本机服务地址无效，请填写 127.0.0.1:端口。" = "Invalid local service address. Use 127.0.0.1:PORT.";
+
+"通过本机代理读取 %@" = "Read %@ through a local proxy";
+
+"请在插件配置中授权联网。" = "Allow network access in Plugin Settings.";
+
+"响应过大，超过插件网络读取上限。" = "The response exceeds the plugin network size limit.";
+"插件网络请求超时。" = "The plugin network request timed out.";
+"无法连接插件服务（%@）。" = "Could not connect to the plugin service (%@).";
+"插件网络请求失败（%@）。" = "The plugin network request failed (%@).";
+
+"监听 %@，转发到 %@" = "Listen on %@ and forward to %@";
+"开始监听本机端口？" = "Start listening on a local port?";
+"接收 %@ 的请求并转发到 %@。退出 OpenSticker 后会停止。" = "Accept requests at %@ and forward them to %@. Listening stops when OpenSticker quits.";
+"开始" = "Start";
+"停止本机监听？" = "Stop the local listener?";
+"请先停用代理中的端口映射，否则仍指向此端口的请求会失败。" = "Disable the mapping in your proxy first. Requests still mapped to this port will fail.";
+"停止" = "Stop";
+"无法启动本机监听，请检查端口是否已被占用。" = "Could not start the local listener. Check whether the port is already in use.";

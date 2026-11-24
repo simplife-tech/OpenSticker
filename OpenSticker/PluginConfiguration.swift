@@ -62,6 +62,7 @@ final class PluginConfiguration: ObservableObject {
 
     func setNetworkAuthorized(_ authorized: Bool, for plugin: StickerPlugin) {
         networkGrants[plugin.id] = authorized ? fingerprint(plugin) : nil
+        if !authorized { PluginListenerRegistry.shared.stop(plugin.id) }
         UserDefaults.standard.set(networkGrants, forKey: networkGrantsKey)
     }
 
@@ -109,7 +110,10 @@ final class PluginConfiguration: ObservableObject {
 
         let activeNetwork = retained(networkGrants) { old, new in
             let hosts = Set(new.networkHosts ?? [])
-            return !hosts.isEmpty && hosts.isSubset(of: Set(old.networkHosts ?? []))
+            return new.requestsNetwork && hosts.isSubset(of: Set(old.networkHosts ?? []))
+                && Set(new.loopbackProxyHosts ?? []).isSubset(of: Set(old.loopbackProxyHosts ?? []))
+                && Set(new.reservedLoopbackKeys).isSubset(of: Set(old.reservedLoopbackKeys))
+                && (new.listener == nil || new.listener == old.listener)
         }
         if activeNetwork != networkGrants {
             networkGrants = activeNetwork

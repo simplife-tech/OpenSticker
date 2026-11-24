@@ -23,11 +23,26 @@ struct PluginConfigurationView: View {
     }
 
     private var networkingPlugins: [StickerPlugin] {
-        registry.plugins.filter { !($0.manifest.networkHosts ?? []).isEmpty }
+        registry.plugins.filter { $0.manifest.requestsNetwork }
     }
 
     private var aiPlugins: [StickerPlugin] {
         registry.plugins.filter { $0.manifest.usesLocalAI == true }
+    }
+
+    private func networkDestinations(_ plugin: StickerPlugin, separator: String) -> String {
+        var destinations = plugin.manifest.networkHosts ?? []
+        if !plugin.manifest.reservedLoopbackKeys.isEmpty {
+            destinations.append(L10n.text("在贴纸上确认的本机地址"))
+        }
+        destinations += (plugin.manifest.loopbackProxyHosts ?? []).map {
+            L10n.format("通过本机代理读取 %@", $0)
+        }
+        if let listener = plugin.manifest.listener {
+            destinations.append(L10n.format("监听 %@，转发到 %@", "127.0.0.1:\(listener.port)\(listener.path)",
+                                            listener.upstream.absoluteString))
+        }
+        return destinations.joined(separator: separator)
     }
 
     private var fields: [PluginConfigurationField] {
@@ -133,7 +148,7 @@ struct PluginConfigurationView: View {
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(plugin.name)
-                                    Text((plugin.manifest.networkHosts ?? []).joined(separator: " · "))
+                                    Text(networkDestinations(plugin, separator: " · "))
                                         .font(.caption).foregroundStyle(.secondary)
                                 }
                             }
@@ -203,7 +218,7 @@ struct PluginConfigurationView: View {
                 authorizingNetwork = nil
             }
         } message: { plugin in
-            let hosts = (plugin.manifest.networkHosts ?? []).joined(separator: ", ")
+            let hosts = networkDestinations(plugin, separator: ", ")
             Text(L10n.format("「%@」可以向下列域名发送数据。只授权你信任的插件。\n%@", plugin.name, hosts))
         }
         .alert(L10n.text("允许插件使用 AI 能力？"), isPresented: Binding(

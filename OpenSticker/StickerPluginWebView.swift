@@ -147,6 +147,34 @@ struct StickerPluginWebView: NSViewRepresentable {
                   }
                 }),
                 network: Object.freeze({
+                  listener: Object.freeze({
+                    read(after = 0, stream = "") {
+                      return window.webkit.messageHandlers.stickerNetwork.postMessage({
+                        document: "\(documentID)", listenerAction: "read", after, stream
+                      });
+                    },
+                    start() {
+                      if (!userClick) return null;
+                      return window.webkit.messageHandlers.stickerNetwork.postMessage({
+                        document: "\(documentID)", listenerAction: "start"
+                      });
+                    },
+                    stop() {
+                      if (!userClick) return null;
+                      return window.webkit.messageHandlers.stickerNetwork.postMessage({
+                        document: "\(documentID)", listenerAction: "stop"
+                      });
+                    }
+                  }),
+                  supportsMultipleLoopbackAddresses: true,
+                  async configureLoopback(key) {
+                    if (!userClick) return null;
+                    const result = await window.webkit.messageHandlers.stickerNetwork.postMessage({
+                      document: "\(documentID)", configureLoopback: true, ...(typeof key === "string" ? { key } : {})
+                    });
+                    if (result) values[result.key] = result.address;
+                    return result?.address ?? null;
+                  },
                   request(options) {
                     return window.webkit.messageHandlers.stickerNetwork.postMessage({
                       document: "\(documentID)", options
@@ -208,7 +236,8 @@ struct StickerPluginWebView: NSViewRepresentable {
                   let value = body["value"], value.utf8.count <= 98_304 else { return }
             switch body["action"] {
             case "set":
-                guard !supportsHistory, let key = body["key"], (1...128).contains(key.utf8.count) else { return }
+                guard !supportsHistory, let key = body["key"], (1...128).contains(key.utf8.count),
+                      !parent.plugin.manifest.reservedLoopbackKeys.contains(key) else { return }
                 var updated = parent.values
                 updated[key] = value
                 guard updated.count <= 128, updated != parent.values else { return }
@@ -318,14 +347,132 @@ struct StickerPluginWebView: NSViewRepresentable {
             networkTasks.removeAll()
         }
 
+        private func authorizedNetworkRequest(_ input: [String: Any], plugin: StickerPlugin) -> (URLRequest, Int?)? {
+            var hosts = plugin.manifest.networkHosts ?? []
+            hosts += plugin.manifest.reservedLoopbackKeys.compactMap { key in
+                parent.values[key].flatMap(PluginNetwork.configuredLoopbackHost)
+            }
+            if input["viaLoopbackProxy"] != nil {
+                guard let (request, port) = PluginNetwork.proxiedRequest(
+                    from: input, hosts: plugin.manifest.loopbackProxyHosts ?? [], endpoints: hosts
+                ) else { return nil }
+                return (request, port)
+            }
+            return PluginNetwork.request(from: input, hosts: hosts).map { ($0, nil) }
+        }
+
+        private var configuringLoopback = false
+
+        private func configureLoopback(for plugin: StickerPlugin, key requestedKey: String?, reply: @escaping (Any?, String?) -> Void) {
+            let keys = plugin.manifest.reservedLoopbackKeys
+            let fallback = plugin.manifest.loopbackAddressKey ?? (keys.count == 1 ? keys.first : nil)
+            guard parent.mode == .card, let key = requestedKey ?? fallback, keys.contains(key),
+                  !configuringLoopback else {
+                reply(nil, L10n.text("插件网络请求未获授权或参数无效。"))
+                return
+            }
+            configuringLoopback = true
+            defer { configuringLoopback = false }
+            let document = documentID
+            let alert = NSAlert()
+            alert.messageText = L10n.text("设置本机服务地址")
+            alert.informativeText = L10n.text("请输入 127.0.0.1 和服务端口。留空恢复插件默认地址。")
+            let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+            field.stringValue = parent.values[key] ?? ""
+            alert.accessoryView = field
+            alert.window.initialFirstResponder = field
+            alert.addButton(withTitle: L10n.text("保存"))
+            alert.addButton(withTitle: L10n.text("取消"))
+            guard alert.runModal() == .alertFirstButtonReturn else {
+                reply(NSNull(), nil)
+                return
+            }
+            let raw = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let address = raw.isEmpty ? "" : PluginNetwork.configuredLoopbackHost(raw) else {
+                reply(nil, L10n.text("本机服务地址无效，请填写 127.0.0.1:端口。"))
+                return
+            }
+            guard documentID == document, parent.plugin == plugin,
+                  StickerPluginRegistry.shared.plugins.contains(plugin) else {
+                reply(nil, L10n.text("插件网络请求已取消。"))
+                return
+            }
+            var updated = parent.values
+            updated[key] = address
+            parent.values = updated
+            reply(["key": key, "address": address], nil)
+        }
+
+        private var confirmingListener = false
+
+        private func handleListener(_ action: String, body: [String: Any], plugin: StickerPlugin,
+                                    reply: @escaping (Any?, String?) -> Void) {
+            guard parent.mode == .card, let rules = plugin.manifest.listener else {
+                reply(nil, L10n.text("插件网络请求未获授权或参数无效。"))
+                return
+            }
+            let registry = PluginListenerRegistry.shared
+            if action == "read" {
+                reply(registry.snapshot(plugin.id, after: max(0, body["after"] as? Int ?? 0),
+                                        stream: body["stream"] as? String), nil)
+                return
+            }
+            guard ["start", "stop"].contains(action), !confirmingListener else {
+                reply(nil, L10n.text("插件网络请求未获授权或参数无效。"))
+                return
+            }
+            confirmingListener = true
+            defer { confirmingListener = false }
+            let alert = NSAlert()
+            if action == "start" {
+                alert.messageText = L10n.text("开始监听本机端口？")
+                alert.informativeText = L10n.format("接收 %@ 的请求并转发到 %@。退出 OpenSticker 后会停止。", "127.0.0.1:\(rules.port)\(rules.path)", rules.upstream.absoluteString)
+                alert.addButton(withTitle: L10n.text("开始"))
+            } else {
+                alert.messageText = L10n.text("停止本机监听？")
+                alert.informativeText = L10n.text("请先停用代理中的端口映射，否则仍指向此端口的请求会失败。")
+                alert.addButton(withTitle: L10n.text("停止"))
+            }
+            alert.addButton(withTitle: L10n.text("取消"))
+            let document = documentID
+            NSApp.activate(ignoringOtherApps: true)
+            guard alert.runModal() == .alertFirstButtonReturn else { reply(NSNull(), nil); return }
+            guard documentID == document, parent.plugin == plugin, StickerPluginRegistry.shared.plugins.contains(plugin),
+                  PluginConfiguration.shared.isNetworkAuthorized(plugin) else {
+                reply(nil, L10n.text("插件网络请求已取消。"))
+                return
+            }
+            do {
+                if action == "start" { try registry.start(plugin.id, rules: rules) }
+                else { registry.stop(plugin.id) }
+                reply(registry.snapshot(plugin.id, after: 0, stream: nil), nil)
+            } catch {
+                reply(nil, L10n.text("无法启动本机监听，请检查端口是否已被占用。"))
+            }
+        }
+
         private func handleNetwork(_ message: WKScriptMessage, reply: @escaping (Any?, String?) -> Void) {
             let plugin = parent.plugin
             guard message.frameInfo.isMainFrame,
                   let body = message.body as? [String: Any], body["document"] as? String == documentID,
-                  let input = body["options"] as? [String: Any],
-                  StickerPluginRegistry.shared.plugins.contains(plugin),
-                  PluginConfiguration.shared.isNetworkAuthorized(plugin),
-                  let request = PluginNetwork.request(from: input, hosts: plugin.manifest.networkHosts ?? []) else {
+                  StickerPluginRegistry.shared.plugins.contains(plugin) else {
+                reply(nil, L10n.text("插件网络请求未获授权或参数无效。"))
+                return
+            }
+            if body["configureLoopback"] as? Bool == true {
+                configureLoopback(for: plugin, key: body["key"] as? String, reply: reply)
+                return
+            }
+            guard PluginConfiguration.shared.isNetworkAuthorized(plugin) else {
+                reply(nil, L10n.text("请在插件配置中授权联网。"))
+                return
+            }
+            if let action = body["listenerAction"] as? String {
+                handleListener(action, body: body, plugin: plugin, reply: reply)
+                return
+            }
+            guard let input = body["options"] as? [String: Any],
+                  let (request, proxyPort) = authorizedNetworkRequest(input, plugin: plugin) else {
                 reply(nil, L10n.text("插件网络请求未获授权或参数无效。"))
                 return
             }
@@ -333,12 +480,13 @@ struct StickerPluginWebView: NSViewRepresentable {
                 reply(nil, L10n.text("插件网络请求过多。"))
                 return
             }
+            let base64 = input["responseEncoding"] as? String == "base64"
             let id = UUID()
             let document = documentID
             networkTasks[id] = Task { @MainActor [weak self] in
                 defer { self?.networkTasks.removeValue(forKey: id) }
                 do {
-                    let response = try await PluginNetwork.send(request)
+                    let response = try await PluginNetwork.send(request, base64: base64, loopbackProxyPort: proxyPort)
                     guard !Task.isCancelled, self?.documentID == document,
                           StickerPluginRegistry.shared.plugins.contains(plugin),
                           PluginConfiguration.shared.isNetworkAuthorized(plugin) else {
@@ -346,6 +494,17 @@ struct StickerPluginWebView: NSViewRepresentable {
                         return
                     }
                     reply(response, nil)
+                } catch let error as URLError {
+                    switch error.code {
+                    case .dataLengthExceedsMaximum:
+                        reply(nil, L10n.text("响应过大，超过插件网络读取上限。"))
+                    case .timedOut:
+                        reply(nil, L10n.text("插件网络请求超时。"))
+                    case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost:
+                        reply(nil, L10n.format("无法连接插件服务（%@）。", String(error.errorCode)))
+                    default:
+                        reply(nil, L10n.format("插件网络请求失败（%@）。", String(error.errorCode)))
+                    }
                 } catch {
                     reply(nil, L10n.text("插件网络请求失败。"))
                 }

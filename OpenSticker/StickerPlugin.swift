@@ -13,7 +13,19 @@ struct StickerPlugin: Codable, Equatable, Identifiable {
         let localizations: [String: Translation]?
         let configuration: [PluginConfigurationField]?
         let networkHosts: [String]?
+        let loopbackAddressKey: String?
+        let loopbackAddressKeys: [String]?
+        let loopbackProxyHosts: [String]?
+        let listener: PluginListenerDeclaration?
         let usesLocalAI: Bool?
+
+        var reservedLoopbackKeys: [String] {
+            (loopbackAddressKey.map { [$0] } ?? []) + (loopbackAddressKeys ?? [])
+        }
+
+        var requestsNetwork: Bool {
+            !(networkHosts ?? []).isEmpty || !reservedLoopbackKeys.isEmpty || !(loopbackProxyHosts ?? []).isEmpty || listener != nil
+        }
 
         struct Translation: Codable, Equatable {
             let name: String?
@@ -104,7 +116,14 @@ final class StickerPluginRegistry: ObservableObject {
         let manifest = try JSONDecoder().decode(StickerPlugin.Manifest.self, from: manifestData)
         let fields = manifest.configuration ?? []
         guard fields.count <= 32, Set(fields.map(\.key)).count == fields.count,
-              fields.allSatisfy(\.isValid), PluginNetwork.validHosts(manifest.networkHosts ?? []), manifest.formatVersion == 1,
+              fields.allSatisfy(\.isValid),
+              manifest.reservedLoopbackKeys.count <= 8,
+              Set(manifest.reservedLoopbackKeys).count == manifest.reservedLoopbackKeys.count,
+              manifest.reservedLoopbackKeys.allSatisfy({ (1...128).contains($0.utf8.count) }),
+              manifest.listener?.isValid ?? true,
+              PluginNetwork.validHosts(manifest.networkHosts ?? []),
+              PluginNetwork.validHosts(manifest.loopbackProxyHosts ?? []),
+              (manifest.loopbackProxyHosts ?? []).allSatisfy({ !$0.contains(":") }), manifest.formatVersion == 1,
               manifest.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"#, options: .regularExpression) != nil,
               !manifest.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NSError(domain: "StickerPlugin", code: 1,
@@ -138,6 +157,7 @@ final class StickerPluginRegistry: ObservableObject {
         UserDefaults.standard.set(try JSONEncoder().encode(updated), forKey: storageKey)
         PluginConfiguration.shared.reconcile(previous: plugins, installed: updated)
         ClipboardHistory.shared.reconcile(installed: updated)
+        PluginListenerRegistry.shared.reconcile(installed: updated)
         plugins = updated
     }
 }
